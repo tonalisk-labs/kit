@@ -1,0 +1,4 @@
+# The elite limits, which a repo's clippy.toml adds once its code meets them, beside kit's
+# clippy.toml; `kit-rust-lints --elite` fails one that leaves any out or sets it looser.
+cognitive-complexity-threshold = 10
+too-many-lines-threshold = 40

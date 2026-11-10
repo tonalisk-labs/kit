@@ -1,0 +1,130 @@
+{
+  "name": "@tonalisk-labs/kit",
+  "version": "1.0.0",
+  "description": "The shared base of the tonalisk-labs sites: the E2E harness, the theme, and the rules every repo extends.",
+  "keywords": [
+    "astro",
+    "playwright",
+    "starlight",
+    "tailwind"
+  ],
+  "homepage": "https://github.com/tonalisk-labs/kit#readme",
+  "bugs": "https://github.com/tonalisk-labs/kit/issues",
+  "license": "MIT",
+  "author": "Marco Ferra",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tonalisk-labs/kit.git"
+  },
+  "bin": {
+    "kit-duplicates": "dist/rules/duplicates.js",
+    "kit-lint-styles": "dist/rules/lint-styles.js",
+    "kit-mutants-rust": "dist/testing/src/floors/mutants.js",
+    "kit-prose": "dist/rules/prose.js",
+    "kit-rust-lints": "dist/rules/rust-lints.js",
+    "kit-seo": "dist/testing/src/seo-check.js",
+    "kit-size": "dist/testing/src/size-check.js",
+    "kit-test": "dist/testing/src/floors/node.js",
+    "kit-test-rust": "dist/testing/src/floors/rust.js"
+  },
+  "files": [
+    "dist",
+    "testing/src",
+    "testing/perf-budgets.json",
+    "theme",
+    "rules",
+    "!**/tests",
+    "!theme/themes/build.ts",
+    "!theme/coverage.json"
+  ],
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    "./testing": {
+      "types": "./dist/testing/src/index.d.ts",
+      "default": "./dist/testing/src/index.js"
+    },
+    "./astro": {
+      "types": "./dist/theme/astro.d.ts",
+      "default": "./dist/theme/astro.js"
+    },
+    "./theme": {
+      "types": "./dist/theme/index.d.ts",
+      "default": "./dist/theme/index.js"
+    },
+    "./script": {
+      "types": "./dist/testing/src/script.d.ts",
+      "default": "./dist/testing/src/script.js"
+    },
+    "./theme.css": "./theme/index.css",
+    "./starlight.css": "./theme/starlight.css",
+    "./themes/*.css": "./theme/themes/*.css",
+    "./components/BodyFont.astro": "./theme/fonts/body-font.astro",
+    "./components/Search.astro": "./theme/starlight/search.astro",
+    "./components/StarlightHead.astro": "./theme/fonts/starlight/head.astro",
+    "./components/ThemeSelect.astro": "./theme/starlight/theme-select.astro",
+    "./tsconfig.json": "./rules/tsconfig.json",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt --check -c rules/oxfmt.json",
+    "test": "npm run test:testing && npm run test:theme",
+    "test:testing": "cd testing && node src/floors/node.ts",
+    "test:theme": "cd theme && node ../testing/src/floors/node.ts",
+    "prepack": "npm run build",
+    "build:themes": "node theme/themes/build.ts"
+  },
+  "dependencies": {
+    "@tailwindcss/node": "4.3.3",
+    "axe-core": "4.14.0",
+    "lighthouse": "13.5.0",
+    "oxc-parser": "0.153.0",
+    "parse5": "8.0.1",
+    "puppeteer-core": "25.14.0",
+    "robots-parser": "3.0.1",
+    "satteri": "0.10.5",
+    "sax": "1.6.1",
+    "schema-dts": "2.1.0",
+    "smol-toml": "1.9.1"
+  },
+  "devDependencies": {
+    "@astrojs/starlight": "0.42.6",
+    "@playwright/test": "1.64.1",
+    "@types/hast": "3.0.5",
+    "@types/node": "26.6.4",
+    "@types/sax": "1.2.7",
+    "astro": "7.3.8",
+    "knip": "6.41.0",
+    "oxfmt": "0.72.0",
+    "oxlint": "1.87.0",
+    "oxlint-tsgolint": "7.0.2003",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2"
+  },
+  "peerDependencies": {
+    "@astrojs/starlight": ">=0.42",
+    "@playwright/test": ">=1.64.1",
+    "astro": ">=7.3",
+    "tailwindcss": ">=4.3"
+  },
+  "peerDependenciesMeta": {
+    "@astrojs/starlight": {
+      "optional": true
+    }
+  },
+  "overrides": {
+    "postcss-nested": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

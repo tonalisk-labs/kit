@@ -1,0 +1,22 @@
+# Contributing
+
+Install [mise](https://mise.jdx.dev), then:
+
+```sh
+mise install
+npm ci
+mise run check
+mise generate git-pre-commit --write --hook=pre-push --task=check
+```
+
+`mise run check` is what a pull request runs, and the last line makes git run it before each push.
+
+- **Commits and pull request titles** follow [Conventional Commits](https://www.conventionalcommits.org).
+  A pull request is squash-merged under its title, which becomes one line of the changelog.
+- **Comments** say only what the code can't: why it's done this way, an invariant, a non-obvious
+  edge case, or an outside constraint with its reference, in 2 lines at most for a function or
+  type. If a comment explains what code does, rename or simplify the code instead.
+- **Every change meets [the standard](https://github.com/tonalisk-labs/kit/blob/main/rules/README.md)**,
+  reviewed by someone who wrote none of it.
+- **Shared rules live in [kit](https://github.com/tonalisk-labs/kit).** When kit falls short, fix it
+  there rather than working around it here.

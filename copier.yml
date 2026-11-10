@@ -1,0 +1,43 @@
+# A new tonalisk-labs repo: `uvx copier copy gh:tonalisk-labs/kit <folder>`, then
+# `uvx copier update` brings in the template's later changes.
+_subdirectory: template
+_answers_file: .copier-answers.yml
+# The Rust files, only for a repo that holds crates.
+_exclude:
+  - '{% if not rust %}Cargo.toml{% endif %}'
+  - '{% if not rust %}deny.toml{% endif %}'
+  - '{% if not rust %}rust-toolchain.toml{% endif %}'
+  - '{% if not rust %}clippy.toml{% endif %}'
+  # A private repo publishes nothing and takes no outside contributions, and on GitHub Free its
+  # Actions minutes are limited: its checks run locally, before each commit and each push to main,
+  # through the hooks in .githooks, and Actions runs only what must happen on GitHub.
+  - '{% if private %}LICENSE{% endif %}'
+  - '{% if private %}SECURITY.md{% endif %}'
+  - '{% if private %}CONTRIBUTING.md{% endif %}'
+  - '{% if private %}.github{% endif %}'
+  - '{% if private %}release-please-config.json{% endif %}'
+  - '{% if private %}.release-please-manifest.json{% endif %}'
+  # A public repo has GitHub's secret scanning and CI instead.
+  - '{% if not private %}.gitleaks.toml{% endif %}'
+  - '{% if not private %}.githooks{% endif %}'
+
+name:
+  type: str
+  help: The repo's name, as on GitHub (for example teoria-musical.com)
+description:
+  type: str
+  help: One sentence on what the repo is, which its CLAUDE.md opens with
+private:
+  type: bool
+  default: false
+  help: Is the repo private? It then has no licence, release flow or CI, and its hooks run gitleaks on every commit and the checks before every push to main
+rust:
+  type: bool
+  default: false
+  help: Does the repo hold Rust crates?
+pages:
+  type: bool
+  default: false
+  help: Does a release deploy the site to GitHub Pages?
+  # GitHub Free serves no Pages from a private repo, and a private repo makes no release.
+  when: '{{ not private }}'

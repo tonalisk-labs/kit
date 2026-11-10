@@ -1,0 +1,24 @@
+# Ruff lints and formats every Python file in the repo. It honours .gitignore, so node_modules and
+# build output are never read.
+line-length = 100
+target-version = "py314"
+
+[lint]
+select = ["ALL"]
+ignore = [
+  # Mutually exclusive docstring layouts; D211 and D212 are kept.
+  "D203",
+  "D213",
+  # The formatter owns these; enabling them conflicts with `ruff format`.
+  "COM812",
+  "ISC001",
+  # Build scripts: printing progress is their output.
+  "T201",
+  # Build scripts call trusted tools (lilypond, ffmpeg) found on PATH, with fixed arguments.
+  "S603",
+  "S607",
+  # No per-file copyright header; the licence lives with each site.
+  "CPY001",
+]
+# Typographic characters used on purpose in figure labels.
+allowed-confusables = ["×", "–"]

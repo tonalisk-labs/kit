@@ -1,0 +1,18 @@
+---
+// Starlight's search, its button named with the shortcut it shows (WCAG 2.5.3): the keys, spaced
+// as they read, join the name. Starlight's own script has already shown ⌘ on Apple platforms.
+import Default from '@astrojs/starlight/components/Search.astro';
+---
+
+<Default {...Astro.props} />
+
+<script>
+  for (const button of globalThis.document.querySelectorAll('site-search > button[aria-label]')) {
+    const keys = [...button.querySelectorAll('kbd > kbd')];
+    for (const key of keys.slice(1)) {
+      key.before(' ');
+    }
+    const shown = keys.map((key) => key.textContent).join(' ');
+    button.setAttribute('aria-label', `${button.getAttribute('aria-label') ?? ''} ${shown}`);
+  }
+</script>

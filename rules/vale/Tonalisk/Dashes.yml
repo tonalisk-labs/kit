@@ -1,0 +1,8 @@
+extends: existence
+message: "'%s' is a dash: use a comma, a colon or a full stop."
+level: error
+nonword: true
+tokens:
+  - '—'
+  - '―'
+  - '–'

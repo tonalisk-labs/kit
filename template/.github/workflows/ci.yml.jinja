@@ -1,0 +1,18 @@
+name: ci
+
+on:
+  pull_request:
+
+permissions: {}
+
+concurrency:
+  group: ci-{% raw %}${{ github.ref }}{% endraw %}
+  cancel-in-progress: true
+
+# kit's workflow bounds each of its jobs with timeout-minutes, which a calling job can't set.
+jobs:
+  checks:
+    uses: tonalisk-labs/kit/.github/workflows/checks.yml@{{ _copier_conf.vcs_ref_hash }} # {{ _commit }}
+    permissions:
+      contents: read # to check out the code
+      pull-requests: read # to read the pull request's title

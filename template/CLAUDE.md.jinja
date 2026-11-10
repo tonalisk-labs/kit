@@ -1,0 +1,14 @@
+# {{ name }}
+
+{{ description }}
+
+- `mise run check` before every push, and keep it green.
+{%- if private %}
+- The repo is private, and its Actions minutes are limited, so the checks run here.
+  `mise run hooks` turns on the hooks in `.githooks` once: gitleaks on each commit, and the check
+  before each push to main. `PUSH_UNCHECKED='<why>'` skips the check and logs why. Never push
+  with `--no-verify`.
+{%- endif %}
+- Commits follow Conventional Commits, and each describes the code it changes.
+- Comments say only what the code can't: why, an invariant, an edge case, an outside constraint.
+- Shared rules come from `@tonalisk-labs/kit`. Fix kit when it falls short, never work around it here.

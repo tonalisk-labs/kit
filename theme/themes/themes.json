@@ -1,0 +1,2233 @@
+{
+  "default": {
+    "id": "default",
+    "name": "Default",
+    "aliases": {
+      "primary": "indigo",
+      "secondary": "slate",
+      "accent": "amber"
+    }
+  },
+  "themes": [
+    {
+      "id": "cerulean",
+      "year": 2000,
+      "name": "Cerulean",
+      "source": [
+        {
+          "name": "Swatch 6 (Cerulean)",
+          "hex": "#9cb7d4",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 7",
+          "hex": "#232929",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 8",
+          "hex": "#afa19e",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#9cb7d4",
+          "source": "Swatch 6",
+          "substitute": false,
+          "rationale": "Cerulean, the Colour of the Year: a calm sky blue, the hue most associated with calm and trust."
+        },
+        "secondary": {
+          "hex": "#83a5ae",
+          "substitute": true,
+          "rationale": "Substitute: the palette's other colours are near-neutral (chroma < 0.02); an analogous blue-teal at lower chroma supports without competing."
+        },
+        "accent": {
+          "hex": "#e28b63",
+          "substitute": true,
+          "rationale": "Substitute: a warm apricot on the split-complementary side, taking its hue from the palette's warm taupe (Swatch 8), for sparing highlights."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#f0f4f9",
+          "100": "#e1e9f2",
+          "200": "#c8d8e9",
+          "300": "#9cb7d4",
+          "400": "#7c9fc4",
+          "500": "#58799c",
+          "600": "#4d6e91",
+          "700": "#3e5e80",
+          "800": "#2d4d6d",
+          "900": "#244260",
+          "950": "#172839"
+        },
+        "secondary": {
+          "50": "#f1f4f5",
+          "100": "#e3e9eb",
+          "200": "#ccd9dc",
+          "300": "#abc1c7",
+          "400": "#83a5ae",
+          "500": "#5e8995",
+          "600": "#47737e",
+          "700": "#37636e",
+          "800": "#2e5159",
+          "900": "#2c444a",
+          "950": "#1b292c"
+        },
+        "accent": {
+          "50": "#fbf1ed",
+          "100": "#f6e4dc",
+          "200": "#f0cebf",
+          "300": "#e7ae94",
+          "400": "#e28b63",
+          "500": "#ca5d23",
+          "600": "#b04500",
+          "700": "#9d3300",
+          "800": "#802c00",
+          "900": "#672b0b",
+          "950": "#3d1c0b"
+        }
+      }
+    },
+    {
+      "id": "fuchsia-rose",
+      "year": 2001,
+      "name": "Fuchsia Rose",
+      "source": [
+        {
+          "name": "Swatch 1 (Fuchsia Rose)",
+          "hex": "#c74375",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 2",
+          "hex": "#f187b6",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 3",
+          "hex": "#4c6026",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 4",
+          "hex": "#ad7352",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 5",
+          "hex": "#f8f7ef",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#c74375",
+          "source": "Swatch 1",
+          "substitute": false,
+          "rationale": "Fuchsia Rose, the Colour of the Year: a warm, affectionate pink with energy."
+        },
+        "secondary": {
+          "hex": "#ad7352",
+          "source": "Swatch 4",
+          "substitute": false,
+          "rationale": "Terracotta, analogous (49 degrees) and calmer (lower chroma): an earthy support for the pink."
+        },
+        "accent": {
+          "hex": "#4c6026",
+          "source": "Swatch 3",
+          "substitute": false,
+          "rationale": "Olive green, 125 degrees away: the palette's contrasting counterweight, used sparingly."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#fcf0f3",
+          "100": "#f8e2e7",
+          "200": "#f3cad4",
+          "300": "#eba6ba",
+          "400": "#dd7597",
+          "500": "#c74375",
+          "600": "#bc2165",
+          "700": "#a31556",
+          "800": "#831a46",
+          "900": "#6a213c",
+          "950": "#3f1625"
+        },
+        "secondary": {
+          "50": "#f8f3f0",
+          "100": "#f0e6e1",
+          "200": "#e4d2c8",
+          "300": "#d5b5a5",
+          "400": "#be9076",
+          "500": "#ad7352",
+          "600": "#985933",
+          "700": "#834b29",
+          "800": "#6a3e24",
+          "900": "#563725",
+          "950": "#342217"
+        },
+        "accent": {
+          "50": "#f3f5f0",
+          "100": "#e6eae1",
+          "200": "#d2d9c9",
+          "300": "#b6c2a5",
+          "400": "#92a377",
+          "500": "#758a52",
+          "600": "#5e7534",
+          "700": "#4c6026",
+          "800": "#415125",
+          "900": "#394425",
+          "950": "#232918"
+        }
+      }
+    },
+    {
+      "id": "true-red",
+      "year": 2002,
+      "name": "True Red",
+      "source": [
+        {
+          "name": "Swatch 9",
+          "hex": "#f1b00a",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 10 (True Red)",
+          "hex": "#c01933",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 11",
+          "hex": "#cf9192",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 12",
+          "hex": "#e2e2e4",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#c01933",
+          "source": "Swatch 10",
+          "substitute": false,
+          "rationale": "True Red, the Colour of the Year: red signals energy and urgency, so it is kept to primary actions."
+        },
+        "secondary": {
+          "hex": "#a17557",
+          "substitute": true,
+          "rationale": "Substitute: the palette's dusty rose is the same hue as the red (3 degrees), too close to tell apart; an analogous warm brown at low chroma supports."
+        },
+        "accent": {
+          "hex": "#f1b00a",
+          "source": "Swatch 9",
+          "substitute": false,
+          "rationale": "Golden yellow, 61 degrees away and vivid: a bright contrasting highlight, used sparingly."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#fdf0f0",
+          "100": "#f9e2e1",
+          "200": "#f5cac8",
+          "300": "#efa7a5",
+          "400": "#e37676",
+          "500": "#cf444c",
+          "600": "#c01933",
+          "700": "#a9122b",
+          "800": "#881926",
+          "900": "#6d2125",
+          "950": "#411718"
+        },
+        "secondary": {
+          "50": "#f7f3f0",
+          "100": "#eee7e2",
+          "200": "#e1d3ca",
+          "300": "#cfb7a8",
+          "400": "#b7937b",
+          "500": "#a17557",
+          "600": "#8e5f3d",
+          "700": "#7b5032",
+          "800": "#63422b",
+          "900": "#513929",
+          "950": "#31231a"
+        },
+        "accent": {
+          "50": "#fdf3e1",
+          "100": "#f9e6c5",
+          "200": "#f5d18f",
+          "300": "#f1b00a",
+          "400": "#cd8e00",
+          "500": "#ac7600",
+          "600": "#906100",
+          "700": "#7c5200",
+          "800": "#664300",
+          "900": "#583800",
+          "950": "#382100"
+        }
+      }
+    },
+    {
+      "id": "aqua-sky",
+      "year": 2003,
+      "name": "Aqua Sky",
+      "source": [
+        {
+          "name": "Swatch 13 (Aqua Sky)",
+          "hex": "#7cc4c3",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 14",
+          "hex": "#356531",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 15",
+          "hex": "#d6d0d2",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#7cc4c3",
+          "source": "Swatch 13",
+          "substitute": false,
+          "rationale": "Aqua Sky, the Colour of the Year: a fresh, calm blue-green."
+        },
+        "secondary": {
+          "hex": "#356531",
+          "source": "Swatch 14",
+          "substitute": false,
+          "rationale": "Leaf green, analogous (53 degrees) and deeper: grounds the aqua."
+        },
+        "accent": {
+          "hex": "#eb8373",
+          "substitute": true,
+          "rationale": "Substitute: the palette has no contrasting colour (only a neutral); a coral on the split-complementary side warms the cool pair."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#ecf6f6",
+          "100": "#d9edec",
+          "200": "#b8dfde",
+          "300": "#7cc4c3",
+          "400": "#47aead",
+          "500": "#048383",
+          "600": "#007c7c",
+          "700": "#006b6b",
+          "800": "#005656",
+          "900": "#004c4d",
+          "950": "#002e2f"
+        },
+        "secondary": {
+          "50": "#f1f5f1",
+          "100": "#e3ebe2",
+          "200": "#cddbcb",
+          "300": "#acc5aa",
+          "400": "#82a77e",
+          "500": "#60905b",
+          "600": "#457a40",
+          "700": "#356531",
+          "800": "#30552d",
+          "900": "#2d472b",
+          "950": "#1c2b1b"
+        },
+        "accent": {
+          "50": "#fdf1ef",
+          "100": "#f8e3df",
+          "200": "#f4cbc4",
+          "300": "#eea99d",
+          "400": "#eb8373",
+          "500": "#d35040",
+          "600": "#b93628",
+          "700": "#a62115",
+          "800": "#861f15",
+          "900": "#6c241c",
+          "950": "#411813"
+        }
+      }
+    },
+    {
+      "id": "tigerlily",
+      "year": 2004,
+      "name": "Tigerlily",
+      "source": [
+        {
+          "name": "Swatch 16 (Tigerlily)",
+          "hex": "#e2583e",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 17",
+          "hex": "#2c1316",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 18",
+          "hex": "#ffa336",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 19",
+          "hex": "#e9051e",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#e2583e",
+          "source": "Swatch 16",
+          "substitute": false,
+          "rationale": "Tigerlily, the Colour of the Year: a warm orange-red, energetic and inviting."
+        },
+        "secondary": {
+          "hex": "#ffa336",
+          "source": "Swatch 18",
+          "substitute": false,
+          "rationale": "Marigold orange, analogous (32 degrees) and lower chroma: a warm, friendly support."
+        },
+        "accent": {
+          "hex": "#0096af",
+          "substitute": true,
+          "rationale": "Substitute: the palette is all warm (reds, orange, near-black); a complementary teal contrasts, used sparingly."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#fdf1ee",
+          "100": "#f9e2dd",
+          "200": "#f5cbc2",
+          "300": "#f0a899",
+          "400": "#e37863",
+          "500": "#e2583e",
+          "600": "#c42200",
+          "700": "#aa1600",
+          "800": "#891b06",
+          "900": "#6e2315",
+          "950": "#42170f"
+        },
+        "secondary": {
+          "50": "#fff1e3",
+          "100": "#ffe3c8",
+          "200": "#ffcb97",
+          "300": "#ffa336",
+          "400": "#e27f00",
+          "500": "#be6900",
+          "600": "#a05600",
+          "700": "#8a4800",
+          "800": "#723a00",
+          "900": "#633100",
+          "950": "#401b00"
+        },
+        "accent": {
+          "50": "#eef5f7",
+          "100": "#ddebef",
+          "200": "#c0dce3",
+          "300": "#95c6d3",
+          "400": "#56a9bc",
+          "500": "#0096af",
+          "600": "#007a94",
+          "700": "#00697f",
+          "800": "#005669",
+          "900": "#004856",
+          "950": "#072b33"
+        }
+      },
+      "dark": {
+        "primary": {
+          "500": "#ce492f"
+        }
+      }
+    },
+    {
+      "id": "blue-turquoise",
+      "year": 2005,
+      "name": "Blue Turquoise",
+      "source": [
+        {
+          "name": "Swatch 20",
+          "hex": "#bedae5",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 21 (Blue Turquoise)",
+          "hex": "#54b0af",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 22",
+          "hex": "#bd9975",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#54b0af",
+          "source": "Swatch 21",
+          "substitute": false,
+          "rationale": "Blue Turquoise, the Colour of the Year: a calm, restorative blue-green."
+        },
+        "secondary": {
+          "hex": "#bedae5",
+          "source": "Swatch 20",
+          "substitute": false,
+          "rationale": "Pale sky blue, analogous (29 degrees) and calmer: a soft support."
+        },
+        "accent": {
+          "hex": "#bd9975",
+          "source": "Swatch 22",
+          "substitute": false,
+          "rationale": "Sand, 128 degrees away on the warm side: a contrasting, earthy highlight."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#edf6f5",
+          "100": "#dceceb",
+          "200": "#bfdddc",
+          "300": "#93c9c7",
+          "400": "#54b0af",
+          "500": "#008383",
+          "600": "#007d7d",
+          "700": "#006c6c",
+          "800": "#005555",
+          "900": "#004b4a",
+          "950": "#042d2d"
+        },
+        "secondary": {
+          "50": "#edf5f8",
+          "100": "#dcebf1",
+          "200": "#bedae5",
+          "300": "#9fc4d2",
+          "400": "#7fa2af",
+          "500": "#658895",
+          "600": "#4f717e",
+          "700": "#40616d",
+          "800": "#2f505c",
+          "900": "#244550",
+          "950": "#082b36"
+        },
+        "accent": {
+          "50": "#f7f3ef",
+          "100": "#eee7e0",
+          "200": "#e1d4c6",
+          "300": "#d0b8a1",
+          "400": "#bd9975",
+          "500": "#a47748",
+          "600": "#8c6131",
+          "700": "#7b5120",
+          "800": "#64421d",
+          "900": "#523a20",
+          "950": "#312315"
+        }
+      }
+    },
+    {
+      "id": "sand-dollar",
+      "year": 2006,
+      "name": "Sand Dollar",
+      "source": [
+        {
+          "name": "Swatch 23 (Sand Dollar)",
+          "hex": "#deccbe",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 24",
+          "hex": "#eff4f8",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 25",
+          "hex": "#b2c5d3",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 26",
+          "hex": "#817172",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 27",
+          "hex": "#ac5e52",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#deccbe",
+          "source": "Swatch 23",
+          "substitute": false,
+          "rationale": "Sand Dollar, the Colour of the Year: a quiet, stable neutral beige."
+        },
+        "secondary": {
+          "hex": "#b2c5d3",
+          "source": "Swatch 25",
+          "substitute": false,
+          "rationale": "Blue-grey, complementary (180 degrees) and equally calm: a cool balance to the warm sand."
+        },
+        "accent": {
+          "hex": "#ac5e52",
+          "source": "Swatch 27",
+          "substitute": false,
+          "rationale": "Terracotta, the palette's one saturated colour: contrasts by chroma rather than hue, used sparingly."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#f8f3ef",
+          "100": "#f0e6df",
+          "200": "#deccbe",
+          "300": "#cfb8a6",
+          "400": "#ad9785",
+          "500": "#867160",
+          "600": "#7b6756",
+          "700": "#6b5747",
+          "800": "#5a4637",
+          "900": "#4e3b2c",
+          "950": "#332214"
+        },
+        "secondary": {
+          "50": "#f1f4f7",
+          "100": "#e3e9ed",
+          "200": "#cdd8e0",
+          "300": "#b2c5d3",
+          "400": "#879fb0",
+          "500": "#6e8596",
+          "600": "#586f7f",
+          "700": "#485f6e",
+          "800": "#384e5d",
+          "900": "#2e4251",
+          "950": "#1d2830"
+        },
+        "accent": {
+          "50": "#f9f2f0",
+          "100": "#f2e5e2",
+          "200": "#e9d0cb",
+          "300": "#dcb1aa",
+          "400": "#c8897e",
+          "500": "#ac5e52",
+          "600": "#a44e41",
+          "700": "#8e4136",
+          "800": "#72362e",
+          "900": "#5d322b",
+          "950": "#381f1b"
+        }
+      }
+    },
+    {
+      "id": "chili-pepper",
+      "year": 2007,
+      "name": "Chili Pepper",
+      "source": [
+        {
+          "name": "Swatch 28",
+          "hex": "#ebc469",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 29 (Chili Pepper)",
+          "hex": "#9b1c31",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 30",
+          "hex": "#d8d9d3",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#9b1c31",
+          "source": "Swatch 29",
+          "substitute": false,
+          "rationale": "Chili Pepper, the Colour of the Year: a deep, confident red."
+        },
+        "secondary": {
+          "hex": "#94644f",
+          "substitute": true,
+          "rationale": "Substitute: the palette's other colours are gold (the accent) and a neutral; an analogous warm brown at low chroma supports."
+        },
+        "accent": {
+          "hex": "#ebc469",
+          "source": "Swatch 28",
+          "substitute": false,
+          "rationale": "Gold, 69 degrees away: a warm, contrasting highlight."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#fcf1f1",
+          "100": "#f7e3e2",
+          "200": "#f2cbcb",
+          "300": "#eaa9aa",
+          "400": "#dc7b7e",
+          "500": "#c74d57",
+          "600": "#bb2f42",
+          "700": "#9b1c31",
+          "800": "#82232e",
+          "900": "#69262b",
+          "950": "#3f191b"
+        },
+        "secondary": {
+          "50": "#f7f3f1",
+          "100": "#eee6e3",
+          "200": "#e1d3cd",
+          "300": "#cfb7ad",
+          "400": "#b69283",
+          "500": "#a27663",
+          "600": "#94644f",
+          "700": "#7a4f3d",
+          "800": "#634233",
+          "900": "#51392f",
+          "950": "#31231d"
+        },
+        "accent": {
+          "50": "#f9f3e6",
+          "100": "#f2e7ce",
+          "200": "#ead4a4",
+          "300": "#ebc469",
+          "400": "#c59300",
+          "500": "#a67900",
+          "600": "#8b6400",
+          "700": "#775500",
+          "800": "#634500",
+          "900": "#553a00",
+          "950": "#362300"
+        }
+      }
+    },
+    {
+      "id": "blue-iris",
+      "year": 2008,
+      "name": "Blue Iris",
+      "source": [
+        {
+          "name": "Swatch 31 (Blue Iris)",
+          "hex": "#5b5c9f",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 32",
+          "hex": "#d2d7ff",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 33",
+          "hex": "#99c6ed",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 34",
+          "hex": "#111129",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 35",
+          "hex": "#012943",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#5b5c9f",
+          "source": "Swatch 31",
+          "substitute": false,
+          "rationale": "Blue Iris, the Colour of the Year: a blue-violet, calm with a touch of creativity."
+        },
+        "secondary": {
+          "hex": "#99c6ed",
+          "source": "Swatch 33",
+          "substitute": false,
+          "rationale": "Sky blue, analogous (36 degrees) and calmer: a gentle support."
+        },
+        "accent": {
+          "hex": "#ddb049",
+          "substitute": true,
+          "rationale": "Substitute: the palette is all blues and violets; a split-complementary gold contrasts, used sparingly."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#f3f3f9",
+          "100": "#e6e7f1",
+          "200": "#d3d5e8",
+          "300": "#b7badb",
+          "400": "#9396c8",
+          "500": "#6f71af",
+          "600": "#5b5c9f",
+          "700": "#535490",
+          "800": "#444574",
+          "900": "#3a3c5d",
+          "950": "#232438"
+        },
+        "secondary": {
+          "50": "#eef5fb",
+          "100": "#ddeaf6",
+          "200": "#c0daf0",
+          "300": "#99c6ed",
+          "400": "#67a2d3",
+          "500": "#4d87b7",
+          "600": "#36709e",
+          "700": "#25608d",
+          "800": "#0f4e7a",
+          "900": "#02436c",
+          "950": "#092940"
+        },
+        "accent": {
+          "50": "#faf3e5",
+          "100": "#f4e7cc",
+          "200": "#edd39f",
+          "300": "#ddb049",
+          "400": "#c89100",
+          "500": "#a87800",
+          "600": "#8c6300",
+          "700": "#795400",
+          "800": "#644400",
+          "900": "#563a00",
+          "950": "#372200"
+        }
+      }
+    },
+    {
+      "id": "mimosa",
+      "year": 2009,
+      "name": "Mimosa",
+      "source": [
+        {
+          "name": "Swatch 36 (Mimosa)",
+          "hex": "#f0c05a",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 37",
+          "hex": "#f4ad1d",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 38",
+          "hex": "#ad4a07",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 39",
+          "hex": "#505209",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 40",
+          "hex": "#cbd1d1",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#f0c05a",
+          "source": "Swatch 36",
+          "substitute": false,
+          "rationale": "Mimosa, the Colour of the Year: a warm yellow, optimistic and attention-getting."
+        },
+        "secondary": {
+          "hex": "#505209",
+          "source": "Swatch 39",
+          "substitute": false,
+          "rationale": "Olive, analogous (27 degrees) and calmer: a grounded support for the yellow."
+        },
+        "accent": {
+          "hex": "#ad4a07",
+          "source": "Swatch 38",
+          "substitute": false,
+          "rationale": "Burnt orange, the palette's deepest saturated colour: a contrast in value, used sparingly."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#fbf3e4",
+          "100": "#f5e7cc",
+          "200": "#eed39e",
+          "300": "#f0c05a",
+          "400": "#ca9000",
+          "500": "#9b6c00",
+          "600": "#8e6300",
+          "700": "#7a5400",
+          "800": "#654400",
+          "900": "#573900",
+          "950": "#372200"
+        },
+        "secondary": {
+          "50": "#f4f4ee",
+          "100": "#e8e9de",
+          "200": "#d6d8c2",
+          "300": "#bdc19a",
+          "400": "#9da163",
+          "500": "#848734",
+          "600": "#6e7103",
+          "700": "#5e6000",
+          "800": "#505209",
+          "900": "#414315",
+          "950": "#27280f"
+        },
+        "accent": {
+          "50": "#faf2ee",
+          "100": "#f4e5de",
+          "200": "#eccfc2",
+          "300": "#e1b19a",
+          "400": "#cf8765",
+          "500": "#bf6537",
+          "600": "#ad4a07",
+          "700": "#953c00",
+          "800": "#78340a",
+          "900": "#613017",
+          "950": "#3a1e10"
+        }
+      }
+    },
+    {
+      "id": "turquoise",
+      "year": 2010,
+      "name": "Turquoise",
+      "source": [
+        {
+          "name": "Swatch 41 (Turquoise)",
+          "hex": "#45b5a9",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 42",
+          "hex": "#d4652e",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 43",
+          "hex": "#c4ae85",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 44",
+          "hex": "#1a2e25",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#45b5a9",
+          "source": "Swatch 41",
+          "substitute": false,
+          "rationale": "Turquoise, the Colour of the Year: a refreshing, calm blue-green."
+        },
+        "secondary": {
+          "hex": "#c4ae85",
+          "source": "Swatch 43",
+          "substitute": false,
+          "rationale": "Sand, warm and low chroma: a quiet, beach-like support."
+        },
+        "accent": {
+          "hex": "#d4652e",
+          "source": "Swatch 42",
+          "substitute": false,
+          "rationale": "Orange, split-complementary (141 degrees): the palette's vivid contrast."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#edf6f5",
+          "100": "#dbedea",
+          "200": "#bcdfd9",
+          "300": "#8ccbc2",
+          "400": "#45b5a9",
+          "500": "#008579",
+          "600": "#007e73",
+          "700": "#006d63",
+          "800": "#00574e",
+          "900": "#004d45",
+          "950": "#002e2a"
+        },
+        "secondary": {
+          "50": "#f7f3ed",
+          "100": "#eee7db",
+          "200": "#e1d5bd",
+          "300": "#c4ae85",
+          "400": "#b39761",
+          "500": "#997d48",
+          "600": "#826731",
+          "700": "#715720",
+          "800": "#5f460b",
+          "900": "#533b00",
+          "950": "#322407"
+        },
+        "accent": {
+          "50": "#fbf1ed",
+          "100": "#f6e4dc",
+          "200": "#f0cebf",
+          "300": "#e8ae95",
+          "400": "#d9815b",
+          "500": "#d4652e",
+          "600": "#b83c00",
+          "700": "#9f3000",
+          "800": "#802b00",
+          "900": "#672b0c",
+          "950": "#3e1c0c"
+        }
+      }
+    },
+    {
+      "id": "honeysuckle",
+      "year": 2011,
+      "name": "Honeysuckle",
+      "source": [
+        {
+          "name": "Swatch 45",
+          "hex": "#f1aab0",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 46 (Honeysuckle)",
+          "hex": "#d94f70",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 47",
+          "hex": "#b2d5ff",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 48",
+          "hex": "#586a76",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#d94f70",
+          "source": "Swatch 46",
+          "substitute": false,
+          "rationale": "Honeysuckle, the Colour of the Year: a lively, warm pink."
+        },
+        "secondary": {
+          "hex": "#586a76",
+          "source": "Swatch 48",
+          "substitute": false,
+          "rationale": "Slate blue, on the split-complementary side and low chroma: a calm, cool grounding."
+        },
+        "accent": {
+          "hex": "#b2d5ff",
+          "source": "Swatch 47",
+          "substitute": false,
+          "rationale": "Light blue, 116 degrees away: a cool highlight, used sparingly."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#fdf0f2",
+          "100": "#f9e2e4",
+          "200": "#f4cacf",
+          "300": "#eea6b1",
+          "400": "#e17589",
+          "500": "#d94f70",
+          "600": "#c01d53",
+          "700": "#a71145",
+          "800": "#86183a",
+          "900": "#6c2133",
+          "950": "#40161f"
+        },
+        "secondary": {
+          "50": "#f2f4f5",
+          "100": "#e6e8ea",
+          "200": "#d2d7da",
+          "300": "#b6bec4",
+          "400": "#909da6",
+          "500": "#74848f",
+          "600": "#586a76",
+          "700": "#4e5e69",
+          "800": "#404d55",
+          "900": "#384147",
+          "950": "#22272b"
+        },
+        "accent": {
+          "50": "#ebf5ff",
+          "100": "#d8eaff",
+          "200": "#b2d5ff",
+          "300": "#93c0f6",
+          "400": "#739fd2",
+          "500": "#5a84b6",
+          "600": "#446e9e",
+          "700": "#345d8d",
+          "800": "#234c7a",
+          "900": "#17406e",
+          "950": "#002651"
+        }
+      },
+      "dark": {
+        "primary": {
+          "500": "#c94364"
+        }
+      }
+    },
+    {
+      "id": "tangerine-tango",
+      "year": 2012,
+      "name": "Tangerine Tango",
+      "source": [
+        {
+          "name": "Swatch 49 (Tangerine Tango)",
+          "hex": "#dc4124",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 50",
+          "hex": "#c01120",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 51",
+          "hex": "#342625",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 52",
+          "hex": "#653c36",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 53",
+          "hex": "#f4f6f3",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#dc4124",
+          "source": "Swatch 49",
+          "substitute": false,
+          "rationale": "Tangerine Tango, the Colour of the Year: a vibrant red-orange, energetic."
+        },
+        "secondary": {
+          "hex": "#966634",
+          "substitute": true,
+          "rationale": "Substitute: the palette's other colours are the same hue (reds and browns within 7 degrees); an analogous amber-brown at lower chroma supports."
+        },
+        "accent": {
+          "hex": "#0091a7",
+          "substitute": true,
+          "rationale": "Substitute: no contrasting palette colour; a complementary teal contrasts, used sparingly."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#fef0ed",
+          "100": "#fbe2dc",
+          "200": "#f8cabf",
+          "300": "#f5a695",
+          "400": "#ea735b",
+          "500": "#dc4124",
+          "600": "#cc0000",
+          "700": "#b10000",
+          "800": "#8e0c00",
+          "900": "#721d0d",
+          "950": "#44150c"
+        },
+        "secondary": {
+          "50": "#f7f3ef",
+          "100": "#eee7e0",
+          "200": "#e1d4c7",
+          "300": "#cfb8a3",
+          "400": "#b79473",
+          "500": "#a3774c",
+          "600": "#966634",
+          "700": "#7b5123",
+          "800": "#644320",
+          "900": "#523a22",
+          "950": "#312316"
+        },
+        "accent": {
+          "50": "#eef5f7",
+          "100": "#ddebee",
+          "200": "#c1dce2",
+          "300": "#96c6d1",
+          "400": "#59a9ba",
+          "500": "#0091a7",
+          "600": "#007b92",
+          "700": "#00697e",
+          "800": "#005667",
+          "900": "#004854",
+          "950": "#092b32"
+        }
+      },
+      "dark": {
+        "primary": {
+          "500": "#d83d20"
+        }
+      }
+    },
+    {
+      "id": "emerald",
+      "year": 2013,
+      "name": "Emerald",
+      "source": [
+        {
+          "name": "Swatch 54 (Emerald)",
+          "hex": "#009473",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 55",
+          "hex": "#225d3d",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 56",
+          "hex": "#97a3ef",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#009473",
+          "source": "Swatch 54",
+          "substitute": false,
+          "rationale": "Emerald, the Colour of the Year: a rich green, associated with growth and balance."
+        },
+        "secondary": {
+          "hex": "#225d3d",
+          "source": "Swatch 55",
+          "substitute": false,
+          "rationale": "Forest green, analogous (13 degrees) and calmer: a deep support."
+        },
+        "accent": {
+          "hex": "#97a3ef",
+          "source": "Swatch 56",
+          "substitute": false,
+          "rationale": "Periwinkle, 106 degrees away: the palette's contrasting cool highlight."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#eef6f3",
+          "100": "#deece6",
+          "200": "#c2ded3",
+          "300": "#98c9b7",
+          "400": "#5bae92",
+          "500": "#009473",
+          "600": "#008260",
+          "700": "#006f51",
+          "800": "#00573e",
+          "900": "#014b39",
+          "950": "#0a2d23"
+        },
+        "secondary": {
+          "50": "#f0f5f2",
+          "100": "#e1ebe4",
+          "200": "#c8dccf",
+          "300": "#a4c7b0",
+          "400": "#74aa88",
+          "500": "#4a9369",
+          "600": "#2a7d51",
+          "700": "#1a6c43",
+          "800": "#225d3d",
+          "900": "#214932",
+          "950": "#162c1f"
+        },
+        "accent": {
+          "50": "#f1f3fc",
+          "100": "#e4e7f7",
+          "200": "#cfd5f1",
+          "300": "#b0b9eb",
+          "400": "#97a3ef",
+          "500": "#6c77d5",
+          "600": "#5760bd",
+          "700": "#494faa",
+          "800": "#3b418a",
+          "900": "#343a6d",
+          "950": "#202341"
+        }
+      },
+      "dark": {
+        "primary": {
+          "500": "#008564"
+        }
+      }
+    },
+    {
+      "id": "radiant-orchid",
+      "year": 2014,
+      "name": "Radiant Orchid",
+      "source": [
+        {
+          "name": "Swatch 61",
+          "hex": "#f593f6",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 62 (Radiant Orchid)",
+          "hex": "#b163a3",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 63",
+          "hex": "#11071f",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 64",
+          "hex": "#aeeaf5",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 65",
+          "hex": "#417793",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#b163a3",
+          "source": "Swatch 62",
+          "substitute": false,
+          "rationale": "Radiant Orchid, the Colour of the Year: a purple-pink, associated with creativity."
+        },
+        "secondary": {
+          "hex": "#aeeaf5",
+          "source": "Swatch 64",
+          "substitute": false,
+          "rationale": "Pale cyan, split-complementary (124 degrees) and lower chroma: a light, cool support."
+        },
+        "accent": {
+          "hex": "#dcbc33",
+          "substitute": true,
+          "rationale": "Substitute: the palette's other colours share the orchid's or the cyan's hue family; a triadic gold contrasts, used sparingly."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#f8f1f7",
+          "100": "#f1e4ed",
+          "200": "#e6cee0",
+          "300": "#d7aece",
+          "400": "#c183b5",
+          "500": "#b163a3",
+          "600": "#9b458d",
+          "700": "#86397a",
+          "800": "#6c3162",
+          "900": "#582e51",
+          "950": "#351d30"
+        },
+        "secondary": {
+          "50": "#e7f7fa",
+          "100": "#d1eff4",
+          "200": "#aeeaf5",
+          "300": "#7bcbda",
+          "400": "#59a9b7",
+          "500": "#3d8f9c",
+          "600": "#217885",
+          "700": "#026774",
+          "800": "#005663",
+          "900": "#004a57",
+          "950": "#002e38"
+        },
+        "accent": {
+          "50": "#f9f4e2",
+          "100": "#f1e9c8",
+          "200": "#e7d695",
+          "300": "#dcbc33",
+          "400": "#bb9800",
+          "500": "#9c7f00",
+          "600": "#826900",
+          "700": "#705900",
+          "800": "#5c4900",
+          "900": "#4f3e00",
+          "950": "#322500"
+        }
+      },
+      "dark": {
+        "primary": {
+          "500": "#a85a9a"
+        }
+      }
+    },
+    {
+      "id": "marsala",
+      "year": 2015,
+      "name": "Marsala",
+      "source": [
+        {
+          "name": "Swatch 57 (Marsala)",
+          "hex": "#955251",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 58",
+          "hex": "#af707b",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 59",
+          "hex": "#bfbada",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 60",
+          "hex": "#1e1d1b",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#955251",
+          "source": "Swatch 57",
+          "substitute": false,
+          "rationale": "Marsala, the Colour of the Year: an earthy wine red, warm and grounded."
+        },
+        "secondary": {
+          "hex": "#af707b",
+          "source": "Swatch 58",
+          "substitute": false,
+          "rationale": "Dusty rose, analogous (14 degrees) and calmer: a soft support."
+        },
+        "accent": {
+          "hex": "#bfbada",
+          "source": "Swatch 59",
+          "substitute": false,
+          "rationale": "Lavender, 89 degrees away: a cool contrasting highlight."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#f8f2f2",
+          "100": "#f0e5e5",
+          "200": "#e5d1d0",
+          "300": "#d5b3b2",
+          "400": "#bf8d8a",
+          "500": "#a36564",
+          "600": "#955251",
+          "700": "#844747",
+          "800": "#6a3b3a",
+          "900": "#573534",
+          "950": "#342020"
+        },
+        "secondary": {
+          "50": "#f8f2f3",
+          "100": "#f0e5e6",
+          "200": "#e5d0d3",
+          "300": "#d5b3b8",
+          "400": "#be8c94",
+          "500": "#af707b",
+          "600": "#985461",
+          "700": "#834652",
+          "800": "#6a3a43",
+          "900": "#56343a",
+          "950": "#342023"
+        },
+        "accent": {
+          "50": "#f4f3f8",
+          "100": "#e8e7f1",
+          "200": "#d6d3e6",
+          "300": "#bfbada",
+          "400": "#9c95bd",
+          "500": "#827ba2",
+          "600": "#6c658b",
+          "700": "#5c557a",
+          "800": "#4b4568",
+          "900": "#403a5b",
+          "950": "#272336"
+        }
+      }
+    },
+    {
+      "id": "serenity-and-rose-quartz",
+      "year": 2016,
+      "name": "Serenity and Rose Quartz",
+      "source": [
+        {
+          "name": "Swatch 66",
+          "hex": "#9bd4df",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 67 (Rose Quartz)",
+          "hex": "#f7cac9",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 68 (Serenity)",
+          "hex": "#92a8d1",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 69",
+          "hex": "#6b5669",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#92a8d1",
+          "source": "Swatch 68",
+          "substitute": false,
+          "rationale": "Serenity, one of the two Colours of the Year: a calm, airy blue, suited to interactive elements."
+        },
+        "secondary": {
+          "hex": "#9bd4df",
+          "source": "Swatch 66",
+          "substitute": false,
+          "rationale": "Pale aqua, analogous (52 degrees) and lower chroma: a gentle support."
+        },
+        "accent": {
+          "hex": "#f7cac9",
+          "source": "Swatch 67",
+          "substitute": false,
+          "rationale": "Rose Quartz, the other Colour of the Year: a warm contrast to Serenity, used sparingly."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#f1f4f8",
+          "100": "#e4e8f1",
+          "200": "#ced7e6",
+          "300": "#afbdd8",
+          "400": "#92a8d1",
+          "500": "#5b75a7",
+          "600": "#516b9c",
+          "700": "#425b8b",
+          "800": "#364a70",
+          "900": "#313f5b",
+          "950": "#1e2636"
+        },
+        "secondary": {
+          "50": "#edf6f7",
+          "100": "#dbecef",
+          "200": "#bddde3",
+          "300": "#9bd4df",
+          "400": "#5ca9b7",
+          "500": "#418e9c",
+          "600": "#267785",
+          "700": "#0d6774",
+          "800": "#005563",
+          "900": "#004956",
+          "950": "#002c33"
+        },
+        "accent": {
+          "50": "#fdf0f0",
+          "100": "#fae2e1",
+          "200": "#f7cac9",
+          "300": "#e5acab",
+          "400": "#c18b8b",
+          "500": "#a67171",
+          "600": "#8e5c5b",
+          "700": "#7d4c4c",
+          "800": "#6a3b3c",
+          "900": "#5e3031",
+          "950": "#411719"
+        }
+      }
+    },
+    {
+      "id": "greenery",
+      "year": 2017,
+      "name": "Greenery",
+      "source": [
+        {
+          "name": "Swatch 70",
+          "hex": "#bedf9a",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 71 (Greenery)",
+          "hex": "#88b04b",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 72",
+          "hex": "#4e591f",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 73",
+          "hex": "#1c3f29",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#88b04b",
+          "source": "Swatch 71",
+          "substitute": false,
+          "rationale": "Greenery, the Colour of the Year: a fresh yellow-green, associated with renewal."
+        },
+        "secondary": {
+          "hex": "#1c3f29",
+          "source": "Swatch 73",
+          "substitute": false,
+          "rationale": "Forest green, analogous (26 degrees) and calmer: a deep support."
+        },
+        "accent": {
+          "hex": "#9c63c2",
+          "substitute": true,
+          "rationale": "Substitute: the palette is all greens; a complementary magenta contrasts, used sparingly."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#f1f6ec",
+          "100": "#e3ecda",
+          "200": "#cdddba",
+          "300": "#adc88b",
+          "400": "#88b04b",
+          "500": "#568300",
+          "600": "#507b00",
+          "700": "#436900",
+          "800": "#355500",
+          "900": "#2f4900",
+          "950": "#1d2c02"
+        },
+        "secondary": {
+          "50": "#f0f5f2",
+          "100": "#e2ebe4",
+          "200": "#cadbcf",
+          "300": "#a7c6b0",
+          "400": "#78a988",
+          "500": "#5d8f6e",
+          "600": "#477858",
+          "700": "#376848",
+          "800": "#255638",
+          "900": "#1c3f29",
+          "950": "#182c1f"
+        },
+        "accent": {
+          "50": "#f6f2fa",
+          "100": "#ede4f3",
+          "200": "#dfcfeb",
+          "300": "#ccb0e1",
+          "400": "#b286d1",
+          "500": "#9c63c2",
+          "600": "#8948b2",
+          "700": "#763b9b",
+          "800": "#5f337c",
+          "900": "#4f2f63",
+          "950": "#2f1e3b"
+        }
+      }
+    },
+    {
+      "id": "ultra-violet",
+      "year": 2018,
+      "name": "Ultra Violet",
+      "source": [
+        {
+          "name": "Swatch 74",
+          "hex": "#c0a8fe",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 75",
+          "hex": "#7631ca",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 76",
+          "hex": "#0b0328",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 77 (Ultra Violet)",
+          "hex": "#5f4b8b",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#5f4b8b",
+          "source": "Swatch 77",
+          "substitute": false,
+          "rationale": "Ultra Violet, the Colour of the Year: a deep purple, associated with creativity and originality."
+        },
+        "secondary": {
+          "hex": "#6f80a5",
+          "substitute": true,
+          "rationale": "Substitute: every palette colour is the same violet hue (within 11 degrees); an analogous blue-violet at low chroma supports."
+        },
+        "accent": {
+          "hex": "#e1b942",
+          "substitute": true,
+          "rationale": "Substitute: no contrasting palette colour; a split-complementary gold contrasts, used sparingly."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#f4f3f9",
+          "100": "#e9e6f1",
+          "200": "#d8d3e7",
+          "300": "#bfb7d9",
+          "400": "#a092c6",
+          "500": "#7e6cac",
+          "600": "#725ca4",
+          "700": "#5f4b8b",
+          "800": "#4f4072",
+          "900": "#43385c",
+          "950": "#282237"
+        },
+        "secondary": {
+          "50": "#f2f4f7",
+          "100": "#e5e8ee",
+          "200": "#d1d6e2",
+          "300": "#b4bdd1",
+          "400": "#8d9bb9",
+          "500": "#6f80a5",
+          "600": "#586b93",
+          "700": "#4a5b7f",
+          "800": "#3e4a66",
+          "900": "#363f54",
+          "950": "#212632"
+        },
+        "accent": {
+          "50": "#faf3e3",
+          "100": "#f3e8ca",
+          "200": "#ebd59a",
+          "300": "#e1b942",
+          "400": "#c29500",
+          "500": "#a27b00",
+          "600": "#886600",
+          "700": "#755700",
+          "800": "#604600",
+          "900": "#533c00",
+          "950": "#342400"
+        }
+      }
+    },
+    {
+      "id": "living-coral",
+      "year": 2019,
+      "name": "Living Coral",
+      "source": [
+        {
+          "name": "Swatch 78",
+          "hex": "#8b453b",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 79",
+          "hex": "#e0bab7",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 80 (Living Coral)",
+          "hex": "#fd5b4c",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 81",
+          "hex": "#f68f80",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 82",
+          "hex": "#130f06",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#fd5b4c",
+          "source": "Swatch 80",
+          "substitute": false,
+          "rationale": "Living Coral (nearest palette colour, dE 4.1), the Colour of the Year: a warm, sociable coral."
+        },
+        "secondary": {
+          "hex": "#c89164",
+          "substitute": true,
+          "rationale": "Substitute: the palette's other colours are tints and shades of the coral itself; an analogous peach at lower chroma supports."
+        },
+        "accent": {
+          "hex": "#1d97a3",
+          "substitute": true,
+          "rationale": "Substitute: no contrasting palette colour; a complementary teal contrasts, used sparingly."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#ffefec",
+          "100": "#ffdfda",
+          "200": "#ffc5bb",
+          "300": "#ff9c8d",
+          "400": "#fd5b4c",
+          "500": "#ee0000",
+          "600": "#d20000",
+          "700": "#b50000",
+          "800": "#970000",
+          "900": "#7f0000",
+          "950": "#4c0806"
+        },
+        "secondary": {
+          "50": "#f9f2ee",
+          "100": "#f1e6dd",
+          "200": "#e7d2c1",
+          "300": "#d9b598",
+          "400": "#c89164",
+          "500": "#b36f30",
+          "600": "#9b5812",
+          "700": "#894800",
+          "800": "#703b00",
+          "900": "#5b3513",
+          "950": "#36210f"
+        },
+        "accent": {
+          "50": "#eef5f6",
+          "100": "#deebed",
+          "200": "#c2dcdf",
+          "300": "#98c6cc",
+          "400": "#5ca9b2",
+          "500": "#1d97a3",
+          "600": "#007c89",
+          "700": "#006a76",
+          "800": "#005760",
+          "900": "#03494f",
+          "950": "#0a2c2f"
+        }
+      }
+    },
+    {
+      "id": "classic-blue",
+      "year": 2020,
+      "name": "Classic Blue",
+      "source": [
+        {
+          "name": "Swatch 83",
+          "hex": "#029def",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 84 (Classic Blue)",
+          "hex": "#0f4c81",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 85",
+          "hex": "#000000",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#0f4c81",
+          "source": "Swatch 84",
+          "substitute": false,
+          "rationale": "Classic Blue, the Colour of the Year: a deep, dependable blue."
+        },
+        "secondary": {
+          "hex": "#5f8797",
+          "substitute": true,
+          "rationale": "Substitute: the palette's bright blue is the same hue (7 degrees) and black is neutral; an analogous muted steel blue supports."
+        },
+        "accent": {
+          "hex": "#efa831",
+          "substitute": true,
+          "rationale": "Substitute: no contrasting palette colour; a split-complementary amber contrasts, used sparingly."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#eff4fa",
+          "100": "#dfe9f5",
+          "200": "#c5d9ee",
+          "300": "#9fc1e5",
+          "400": "#6ba0d7",
+          "500": "#3179bd",
+          "600": "#186eb7",
+          "700": "#045da2",
+          "800": "#0f4c81",
+          "900": "#1a4167",
+          "950": "#12283d"
+        },
+        "secondary": {
+          "50": "#f1f4f6",
+          "100": "#e3e9ec",
+          "200": "#cdd8dd",
+          "300": "#adc1c9",
+          "400": "#82a1ae",
+          "500": "#5f8797",
+          "600": "#457284",
+          "700": "#396271",
+          "800": "#31505c",
+          "900": "#2d434c",
+          "950": "#1c292e"
+        },
+        "accent": {
+          "50": "#fef2e3",
+          "100": "#fae5c8",
+          "200": "#f8cf97",
+          "300": "#efa831",
+          "400": "#d58900",
+          "500": "#b37100",
+          "600": "#965d00",
+          "700": "#814f00",
+          "800": "#6b4000",
+          "900": "#5c3600",
+          "950": "#3b1f00"
+        }
+      }
+    },
+    {
+      "id": "ultimate-gray-and-illuminating",
+      "year": 2021,
+      "name": "Ultimate Gray and Illuminating",
+      "source": [
+        {
+          "name": "Swatch 86",
+          "hex": "#373832",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 87 (Ultimate Gray)",
+          "hex": "#959a9d",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 88 (Illuminating)",
+          "hex": "#f8da48",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#f8da48",
+          "source": "Swatch 88",
+          "substitute": false,
+          "rationale": "Illuminating, one of the two Colours of the Year: a bright, hopeful yellow, the pair's colourful half."
+        },
+        "secondary": {
+          "hex": "#959a9d",
+          "source": "Swatch 87",
+          "substitute": false,
+          "rationale": "Ultimate Gray, the other Colour of the Year: a steady neutral, supporting the yellow as Pantone paired them."
+        },
+        "accent": {
+          "hex": "#6068bc",
+          "substitute": true,
+          "rationale": "Substitute: the palette's third colour is a near-black neutral; a complementary violet contrasts, used sparingly."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#fcf5d3",
+          "100": "#f7e9a9",
+          "200": "#f8da48",
+          "300": "#debb00",
+          "400": "#b89a00",
+          "500": "#8c7400",
+          "600": "#806a00",
+          "700": "#6e5a00",
+          "800": "#5b4900",
+          "900": "#4e3e00",
+          "950": "#312500"
+        },
+        "secondary": {
+          "50": "#f3f4f4",
+          "100": "#e7e8e9",
+          "200": "#d4d6d8",
+          "300": "#babdbf",
+          "400": "#959a9d",
+          "500": "#7c8286",
+          "600": "#666c70",
+          "700": "#565c60",
+          "800": "#474b4e",
+          "900": "#3d4042",
+          "950": "#252728"
+        },
+        "accent": {
+          "50": "#f2f3fa",
+          "100": "#e5e7f4",
+          "200": "#d0d5ec",
+          "300": "#b3bae2",
+          "400": "#8d96d3",
+          "500": "#717ac6",
+          "600": "#6068bc",
+          "700": "#4c529d",
+          "800": "#3e447e",
+          "900": "#363b65",
+          "950": "#21243c"
+        }
+      }
+    },
+    {
+      "id": "very-peri",
+      "year": 2022,
+      "name": "Very Peri",
+      "source": [
+        {
+          "name": "#9B91D6",
+          "hex": "#9b91d6",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 1 (Very Peri)",
+          "hex": "#6868ac",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "#C3AC66",
+          "hex": "#c3ac66",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "#7F5F50",
+          "hex": "#7f5f50",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#6868ac",
+          "source": "Swatch 1",
+          "substitute": false,
+          "rationale": "Very Peri, the Colour of the Year: a periwinkle blue-violet, calm with creative warmth."
+        },
+        "secondary": {
+          "hex": "#7f5f50",
+          "source": "#7F5F50",
+          "substitute": false,
+          "rationale": "Warm brown, split-complementary (124 degrees) and lower chroma: an earthy support."
+        },
+        "accent": {
+          "hex": "#c3ac66",
+          "source": "#C3AC66",
+          "substitute": false,
+          "rationale": "Gold, near-complementary (170 degrees): the palette's vivid contrast."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#f3f3f9",
+          "100": "#e6e7f1",
+          "200": "#d3d4e8",
+          "300": "#b8bada",
+          "400": "#9496c8",
+          "500": "#7071ae",
+          "600": "#6868ac",
+          "700": "#545390",
+          "800": "#454573",
+          "900": "#3b3b5d",
+          "950": "#242437"
+        },
+        "secondary": {
+          "50": "#f6f3f2",
+          "100": "#ece7e5",
+          "200": "#ddd4d0",
+          "300": "#c9b9b2",
+          "400": "#ae968a",
+          "500": "#987a6c",
+          "600": "#7f5f50",
+          "700": "#715446",
+          "800": "#5b453a",
+          "900": "#4c3b34",
+          "950": "#2d2420"
+        },
+        "accent": {
+          "50": "#f7f4e9",
+          "100": "#efe8d4",
+          "200": "#e3d6af",
+          "300": "#c3ac66",
+          "400": "#b79833",
+          "500": "#9c7e07",
+          "600": "#856700",
+          "700": "#735800",
+          "800": "#5f4700",
+          "900": "#513c00",
+          "950": "#332400"
+        }
+      }
+    },
+    {
+      "id": "viva-magenta",
+      "year": 2023,
+      "name": "Viva Magenta",
+      "source": [
+        {
+          "name": "Swatch 1",
+          "hex": "#ff476e",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 2 (Viva Magenta)",
+          "hex": "#bb2649",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 3",
+          "hex": "#ddc4a8",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 4",
+          "hex": "#393939",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        },
+        {
+          "name": "Swatch 5",
+          "hex": "#d4d4d4",
+          "model": "RGB",
+          "flaggedOutOfGamut": false
+        }
+      ],
+      "roles": {
+        "primary": {
+          "hex": "#bb2649",
+          "source": "Swatch 2",
+          "substitute": false,
+          "rationale": "Viva Magenta, the Colour of the Year: a bold crimson-magenta, confident and energetic."
+        },
+        "secondary": {
+          "hex": "#ddc4a8",
+          "source": "Swatch 3",
+          "substitute": false,
+          "rationale": "Warm sand, analogous (56 degrees) and low chroma: a quiet support."
+        },
+        "accent": {
+          "hex": "#2ca2a2",
+          "substitute": true,
+          "rationale": "Substitute: the palette's other colours are a lighter magenta (same hue) and greys; a complementary teal contrasts, used sparingly."
+        }
+      },
+      "scales": {
+        "primary": {
+          "50": "#fcf0f1",
+          "100": "#f8e2e3",
+          "200": "#f3cbcd",
+          "300": "#eca8ad",
+          "400": "#de7884",
+          "500": "#c9485e",
+          "600": "#bb2649",
+          "700": "#a41d3e",
+          "800": "#841f34",
+          "900": "#6a242f",
+          "950": "#40181d"
+        },
+        "secondary": {
+          "50": "#f7f3ee",
+          "100": "#eee7de",
+          "200": "#e2d4c4",
+          "300": "#ddc4a8",
+          "400": "#b49572",
+          "500": "#997b59",
+          "600": "#826543",
+          "700": "#725534",
+          "800": "#604523",
+          "900": "#533a1a",
+          "950": "#322312"
+        },
+        "accent": {
+          "50": "#ecf6f6",
+          "100": "#dbecec",
+          "200": "#bcdedd",
+          "300": "#8ccac9",
+          "400": "#2ca2a2",
+          "500": "#009798",
+          "600": "#007e7f",
+          "700": "#006c6d",
+          "800": "#00595a",
+          "900": "#004c4c",
+          "950": "#002e2e"
+        }
+      }
+    }
+  ]
+}

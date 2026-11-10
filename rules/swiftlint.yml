@@ -1,0 +1,41 @@
+# Every SwiftLint rule there is, opt-in and analyzer rules included, and --strict makes every
+# warning fail. A rule is off only where it contradicts a rule that is on, so no code could satisfy
+# both; each such pair below names the rule kept.
+opt_in_rules:
+  - all
+
+analyzer_rules:
+  - capture_variable
+  - typesafe_array_init
+  - unused_declaration
+  - unused_import
+  # explicit_self is the fifth analyzer rule. It asks for `self.` on every member use, which
+  # redundant_self forbids wherever `self` is not needed; redundant_self is kept, as Swift writes.
+
+disabled_rules:
+  # Asks for an opening brace on its own line; opening_brace asks for it on the declaration's
+  # line, as Swift and swift-format write it. opening_brace is kept.
+  - contrasted_opening_brace
+  # Asks for `public extension` when every member is public; no_extension_access_modifier forbids
+  # an access level on an extension, so each declaration states its own, as explicit_acl and
+  # swift-format's NoAccessLevelOnExtensionDeclaration ask. no_extension_access_modifier is kept.
+  - extension_access_modifier
+
+# Settings that agree with swift-format (.swift-format), which formats the code.
+indentation_width:
+  indentation_width: 4
+line_length:
+  warning: 100
+  ignores_urls: false
+trailing_comma:
+  mandatory_comma: true
+# On Linux, Foundation's types are declared in FoundationEssentials, which Foundation re-exports;
+# on Apple platforms swift-crypto's are CryptoKit's. Each import is the one that compiles everywhere.
+unused_import:
+  allowed_transitive_imports:
+    - module: Foundation
+      allowed_transitive_imports:
+        - FoundationEssentials
+    - module: Crypto
+      allowed_transitive_imports:
+        - CryptoKit

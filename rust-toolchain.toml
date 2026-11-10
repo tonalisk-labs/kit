@@ -1,0 +1,4 @@
+# An exact pin: clippy's lint set changes between patches, so every machine must agree.
+[toolchain]
+channel = "1.99.0"
+components = ["clippy", "llvm-tools", "rustfmt"]

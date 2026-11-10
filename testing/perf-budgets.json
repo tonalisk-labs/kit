@@ -1,0 +1,24 @@
+{
+  "minScore": 90,
+  "minScores": {
+    "accessibility": 100,
+    "best-practices": 100,
+    "seo": 100
+  },
+  "size": {
+    "eager": 174080,
+    "css": 51200,
+    "lazy": 1048576,
+    "wasm": 2097152
+  },
+  "max": {
+    "first-contentful-paint": 1800,
+    "largest-contentful-paint": 2500,
+    "total-blocking-time": 200,
+    "cumulative-layout-shift": 0.1,
+    "speed-index": 3400,
+    "interaction-to-next-paint": 200,
+    "time-to-first-byte": 800,
+    "interaction-cpu": 50
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "extends": ["./rules/oxlint.json"],
+  "env": { "builtin": true, "node": true },
+  "options": {
+    "denyWarnings": true,
+    "reportUnusedDisableDirectives": "error",
+    "typeAware": true,
+    "typeCheck": true
+  }
+}

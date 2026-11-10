@@ -1,0 +1,59 @@
+@import 'tailwindcss';
+@import './theme.css';
+/* The shared looks (ui.ts): Tailwind does not scan a linked package of its own accord. */
+@source './ui.ts';
+
+/* The no-flash script toggles `.dark` on <html> before first paint. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  /* 10% larger than the browser default, in --font-body (kit's siteFont) where the site chose a
+     font, else the system stack. */
+  html {
+    font-size: 110%;
+    font-family: var(--font-body, var(--font-sans));
+  }
+
+  /* Preflight zeroes the UA margins that centre a modal dialog. */
+  dialog:modal {
+    margin: auto;
+  }
+
+  html:has(dialog[open]) {
+    overflow: hidden;
+  }
+
+  :focus-visible {
+    @apply outline-primary-500 dark:outline-primary-400 outline-2 outline-offset-2;
+  }
+}
+
+/* Same-site page loads cross-fade, unless motion is reduced; the browser does it, no script. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+
+/* Viewport-fit=cover: each utility pads the edge it names clear of notches and indicators. */
+@utility safe-pt {
+  padding-top: env(safe-area-inset-top);
+}
+@utility safe-pb-* {
+  padding-bottom: calc(--spacing(--value(integer)) + env(safe-area-inset-bottom));
+}
+@utility safe-px-* {
+  padding-left: calc(--spacing(--value(integer)) + env(safe-area-inset-left));
+  padding-right: calc(--spacing(--value(integer)) + env(safe-area-inset-right));
+}
+@utility safe-bottom-* {
+  bottom: calc(--spacing(--value(integer)) + env(safe-area-inset-bottom));
+}
+@utility safe-top-* {
+  top: calc(--spacing(--value(integer)) + env(safe-area-inset-top));
+}
+
+/* User-authored strings choose their own direction without reordering the UI around them. */
+@utility bidi-plaintext {
+  unicode-bidi: plaintext;
+}

@@ -1,0 +1,7 @@
+# The elite limits on top of kit's rules: a repo's swiftlint.yml names this as its parent_config
+# once its code meets them, in place of swiftlint.yml.
+parent_config: swiftlint.yml
+cyclomatic_complexity:
+  warning: 10
+function_body_length:
+  warning: 40

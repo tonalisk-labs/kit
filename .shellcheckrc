@@ -1,0 +1,6 @@
+# Maximum-strict ShellCheck, shared by editors and the CLI. severity=style reports every
+# level; enable=all turns on the optional checks; external-sources follows `# shellcheck
+# source=` directives.
+enable=all
+severity=style
+external-sources=true

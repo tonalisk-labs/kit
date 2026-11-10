@@ -1,0 +1,9 @@
+---
+// Starlight's head followed by the site's font: a Starlight site's `components.Head`.
+import Default from '@astrojs/starlight/components/Head.astro';
+
+import BodyFont from '../body-font.astro';
+---
+
+<Default><slot /></Default>
+<BodyFont />

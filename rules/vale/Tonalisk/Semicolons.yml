@@ -1,0 +1,6 @@
+extends: existence
+message: 'Use a full stop instead of a semicolon.'
+level: error
+nonword: true
+tokens:
+  - ';'

@@ -1,0 +1,51 @@
+# Each repo's pull-request checks: `mise run check`, the command a developer runs before pushing.
+name: checks
+
+on:
+  workflow_call:
+
+permissions: {}
+
+# bash with pipefail, so a command failing inside a pipe fails its step.
+defaults:
+  run:
+    shell: bash
+
+# Each job's timeout-minutes ends a runner or download that has hung, which GitHub would
+# otherwise hold for 6 hours.
+jobs:
+  check:
+    name: mise run check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read # to check out the code
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # One mise release on every runner, its latest, so each job runs the same task runner.
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        with:
+          version: 2026.11.6
+      - if: hashFiles('Cargo.lock') != ''
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - if: hashFiles('package-lock.json') != ''
+        run: npm ci
+      # A repo's tests may drive Playwright's browsers, which the runner doesn't carry.
+      - if: hashFiles('node_modules/@playwright/test/package.json') != ''
+        run: npx playwright install --with-deps
+      - run: mise run check
+
+  title:
+    name: pull request title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read # to read the title it checks
+    steps:
+      # The squash merge takes the title as its commit, so the title is what the changelog reads.
+      - uses: amannn/action-semantic-pull-request@2252a14e810aa9b85c2d560bd7070c802206ecf6 # v6.1.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

@@ -1,0 +1,60 @@
+#!/bin/sh
+# Before a push that moves main: every commit it brings is a Conventional Commit, and
+# `mise run check` passes on the commit it pushes, which must be the one checked out, with nothing
+# left uncommitted. PUSH_UNCHECKED='<why>' skips the check and logs the reason beside the repo's
+# git data. git's --no-verify skips this hook unseen, so it's never used.
+set -eu
+
+remote="$1"
+types='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
+common="$(git rev-parse --git-common-dir)"
+log="$(cd "${common}" && pwd)/pushes-unchecked.log"
+
+die() {
+	printf 'pre-push: %s\n' "$*" >&2
+	exit 1
+}
+
+# The commits the push brings to main that aren't Conventional Commits, one line each.
+unconventional() {
+	git log --no-merges --format='%h %s' "$@" | while read -r short subject; do
+		if ! printf '%s\n' "${subject}" | grep -Eq "^(${types})(\([^()]+\))?!?: [^ ]"; then
+			printf '  %s %s\n' "${short}" "${subject}"
+		fi
+	done
+}
+
+while read -r _ local_sha remote_ref remote_sha; do
+	[ "${remote_ref}" = refs/heads/main ] || continue
+	# An object name of zeros is a ref the push deletes, or one the remote doesn't have yet.
+	case "${local_sha}" in
+		*[!0]*) ;;
+		*) die "main is never deleted" ;;
+	esac
+	known=no
+	case "${remote_sha}" in
+		*[!0]*) git cat-file -e "${remote_sha}^{commit}" 2> /dev/null && known=yes ;;
+		*) ;;
+	esac
+	if [ "${known}" = yes ]; then
+		bad="$(unconventional "${remote_sha}..${local_sha}")"
+	else
+		bad="$(unconventional "${local_sha}" --not --remotes="${remote}")"
+	fi
+	[ -z "${bad}" ] || die "main would gain commits that aren't Conventional Commits:
+${bad}"
+	if [ -n "${PUSH_UNCHECKED:-}" ]; then
+		now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+		who="$(git config user.email || true)"
+		printf '%s\t%s\t%s\t%s\n' "${now}" "${who}" "${local_sha}" "${PUSH_UNCHECKED}" >> "${log}"
+		printf 'pre-push: main goes to %s unchecked, because %s (logged in %s)\n' \
+			"${local_sha}" "${PUSH_UNCHECKED}" "${log}" >&2
+		continue
+	fi
+	head="$(git rev-parse HEAD)"
+	[ "${head}" = "${local_sha}" ] \
+		|| die "main's new tip isn't the commit checked out here: check it out, then push"
+	changes="$(git status --porcelain)"
+	[ -z "${changes}" ] || die "the working tree holds changes the push leaves out: commit them first"
+	mise run check < /dev/null || die "mise run check failed, so main wasn't pushed"
+done

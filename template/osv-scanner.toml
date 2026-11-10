@@ -1,0 +1,22 @@
+# The packages the audit task's licence allowlist leaves out on purpose: tools a build or a test
+# runs, whose code no shipped page or binary contains. Kit's own audit checks its tree the same way.
+
+[[PackageOverrides]]
+name = "lightningcss(-.+)?"
+nameIsRegex = true
+ecosystem = "npm"
+license.ignore = true
+reason = "Tailwind's CSS compiler (MPL-2.0), run by the build: its output ships, never its code"
+
+[[PackageOverrides]]
+name = "@img/sharp-.+"
+nameIsRegex = true
+ecosystem = "npm"
+license.ignore = true
+reason = "sharp's builds for each platform, which bundle libvips (LGPL-3.0-or-later): Astro's image service runs them at build time alone"
+
+[[PackageOverrides]]
+name = "axe-core"
+ecosystem = "npm"
+license.ignore = true
+reason = "The accessibility checker (MPL-2.0) that kit's tests inject into the pages they test"

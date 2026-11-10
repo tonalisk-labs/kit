@@ -1,0 +1,79 @@
+# Each repo's end-to-end checks: its journeys on the stack kit's harness starts, as `mise run e2e`
+# runs them. A pull request runs the smoke tier, the matrix's first row, and the measured
+# journeys on a desktop row and a phone row; the release runs the whole matrix, the measured
+# journeys on every row, and holds the screens to their baselines on the arm64 image that drew
+# them.
+name: e2e
+
+on:
+  workflow_call:
+    inputs:
+      tier:
+        description: The matrix tier, as E2E_TIER names it (smoke or dev), or full for every row.
+        type: string
+        default: smoke
+
+permissions: {}
+
+# bash with pipefail, so a command failing inside a pipe fails its step.
+defaults:
+  run:
+    shell: bash
+
+# Each job's timeout-minutes ends a runner or download that has hung, which GitHub would
+# otherwise hold for 6 hours.
+jobs:
+  journeys:
+    name: journeys, ${{ inputs.tier }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read # to check out the code
+    env:
+      TIER: ${{ inputs.tier }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # One mise release on every runner, its latest, so each job runs the same task runner.
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        with:
+          version: 2026.11.6
+      - if: hashFiles('Cargo.lock') != ''
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      # The full matrix is every row, which E2E_TIER names by being unset.
+      - run: |
+          if [ "$TIER" != full ]; then
+            export E2E_TIER="$TIER"
+          fi
+          mise run e2e
+      # The measured journeys, held to their budgets: on a desktop row and a phone row for a pull
+      # request, so the phone's drawers are proven each time; on every row for the release.
+      - run: |
+          if [ "$TIER" != full ]; then
+            export E2E_TIER=measured
+          fi
+          KIT_MEASURE=1 mise run e2e
+
+  visual:
+    name: screens against their baselines
+    if: inputs.tier == 'full'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    permissions:
+      contents: read # to check out the code
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # One mise release on every runner, its latest, so each job runs the same task runner.
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        with:
+          version: 2026.11.6
+      - if: hashFiles('Cargo.lock') != ''
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: npm ci
+      # The visual projects' Chromium runs in Playwright's Linux image, which the harness starts.
+      - run: mise run e2e -- --project '*/visual-*'

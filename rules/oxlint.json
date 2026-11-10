@@ -1,0 +1,107 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "react", "react-perf", "jsx-a11y"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "error",
+    "restriction": "error",
+    "perf": "error",
+    "style": "error",
+    "nursery": "error"
+  },
+  "rules": {
+    "typescript/prefer-readonly-parameter-types": "off",
+    "eslint/one-var": "off",
+    "eslint/no-use-before-define": "off",
+    "oxc/no-async-await": "off",
+    "eslint/sort-keys": "off",
+    "eslint/no-ternary": "off",
+    "eslint/no-magic-numbers": "off",
+    "eslint/sort-imports": "off",
+    "eslint/no-undefined": "off",
+    "eslint/require-await": "off",
+    "eslint/no-console": "off",
+    "eslint/capitalized-comments": [
+      "error",
+      "always",
+      {
+        "ignoreConsecutiveComments": true
+      }
+    ],
+    "eslint/max-lines": [
+      "error",
+      {
+        "max": 500
+      }
+    ],
+    "eslint/max-statements": [
+      "error",
+      {
+        "max": 20
+      }
+    ],
+    "react/jsx-filename-extension": [
+      "error",
+      {
+        "extensions": [".tsx"]
+      }
+    ],
+    "react/function-component-definition": [
+      "error",
+      {
+        "namedComponents": "arrow-function",
+        "unnamedComponents": "arrow-function"
+      }
+    ],
+    "react/react-in-jsx-scope": "off",
+    "react-perf/jsx-no-new-function-as-prop": "off",
+    "react-perf/jsx-no-new-object-as-prop": "off",
+    "react-perf/jsx-no-new-array-as-prop": "off",
+    "react/jsx-no-literals": "off",
+    "react/no-multi-comp": [
+      "error",
+      {
+        "ignoreStateless": true
+      }
+    ],
+    "react/jsx-props-no-spreading": [
+      "error",
+      {
+        "html": "ignore"
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["infra/edge/*.js"],
+      "rules": {
+        "eslint/no-implicit-globals": "off",
+        "eslint/no-unused-vars": "off",
+        "eslint/func-style": "off"
+      }
+    },
+    {
+      "files": ["**/*.astro"],
+      "globals": {
+        "Astro": "readonly"
+      }
+    }
+  ],
+  "options": {
+    "denyWarnings": true,
+    "reportUnusedDisableDirectives": "error",
+    "typeAware": true,
+    "typeCheck": true
+  },
+  "settings": {
+    "react": {
+      "version": "19.3.0"
+    }
+  },
+  "env": {
+    "builtin": true,
+    "node": true
+  },
+  "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/.astro/**"]
+}

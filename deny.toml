@@ -1,0 +1,87 @@
+[graph]
+all-features = true
+
+[advisories]
+version = 2
+yanked = "deny"
+
+# Permissive only. A copyleft crate reaching a shipped binary is a licensing decision, not a
+# dependency bump, so it fails the check until it is made deliberately.
+[licenses]
+version = 2
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Unicode-3.0",
+  "Zlib",
+  # Mozilla's root certificates, as data: webpki-root-certs, which reqwest brings through rustls.
+  "CDLA-Permissive-2.0",
+  # Public-domain equivalent: strictly more permissive than MIT.
+  "0BSD",
+]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "deny"
+wildcards = "deny"
+# A second version of a crate builds twice and patches apart: each skip names the crate that still
+# holds it, and goes once that crate moves. Any other fails the check.
+skip = [
+  { crate = "hashbrown@0.16.1", reason = "governor's keyed state; indexmap is on 0.17" },
+  { crate = "syn@2.0.119", reason = "tracing-attributes' macros; serde_derive is on syn 3" },
+]
+
+# What runs at build time is named: a crate that starts shipping a build script fails the check
+# until it is read and added here, and none may bring a prebuilt executable.
+[bans.build]
+executables = "deny"
+allow-build-scripts = [
+  "aws-lc-rs",
+  "aws-lc-sys",
+  "getrandom",
+  "httparse",
+  "icu_normalizer_data",
+  "icu_properties_data",
+  "jni",
+  "jni-macros",
+  "libc",
+  "num-traits",
+  "parking_lot_core",
+  "portable-atomic",
+  "proc-macro2",
+  "quinn",
+  "quinn-udp",
+  "quote",
+  "ring",
+  "rustls",
+  "rustversion",
+  "serde",
+  "serde_core",
+  "serde_json",
+  "thiserror",
+  "wasm-bindgen",
+  "wasm-bindgen-shared",
+  # cpu-time's, on Windows only: each reads only the crate's features and prints link and cfg
+  # directives.
+  "winapi",
+  "winapi-i686-pc-windows-gnu",
+  "winapi-x86_64-pc-windows-gnu",
+  "windows_aarch64_gnullvm",
+  "windows_aarch64_msvc",
+  "windows_i686_gnu",
+  "windows_i686_gnullvm",
+  "windows_i686_msvc",
+  "windows_x86_64_gnu",
+  "windows_x86_64_gnullvm",
+  "windows_x86_64_msvc",
+  "zmij",
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-git = ["https://github.com/tonalisk-labs/kit"]

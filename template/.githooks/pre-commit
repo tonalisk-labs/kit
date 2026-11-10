@@ -1,0 +1,3 @@
+#!/bin/sh
+# gitleaks over what is about to be committed.
+exec mise run pre-commit

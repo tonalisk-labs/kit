@@ -1,0 +1,7 @@
+extends: existence
+message: 'A hyphen between words reads as a dash: use a comma, a colon or a full stop.'
+level: error
+nonword: true
+tokens:
+  - '\S\s+-{1,2}\s+\S'
+  - '\p{L}--\p{L}'

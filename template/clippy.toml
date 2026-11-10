@@ -1,0 +1,12 @@
+# What no tonalisk-labs crate calls, beside the lints in rust-lints.toml. A repo's clippy.toml
+# holds every entry here, and `kit-rust-lints` fails one that leaves any out; it may add its own.
+# Each is allowed to name a crate the repo doesn't use.
+disallowed-methods = [
+  # A task the server's tracker never saw is neither drained nor waited for when it stops.
+  { path = "tokio::spawn", reason = "spawn on a TaskTracker or a JoinSet, which shutdown waits for", allow-invalid = true },
+  # SQL sqlx can't tell from text a request wrote: the constructor here, its name below.
+  { path = "sqlx::AssertSqlSafe", reason = "build a statement from static text, or with QueryBuilder", allow-invalid = true },
+]
+disallowed-types = [
+  { path = "sqlx::AssertSqlSafe", reason = "build a statement from static text, or with QueryBuilder", allow-invalid = true },
+]

@@ -1,0 +1,191 @@
+[tools]
+actionlint = "1.7.12"
+"aqua:taiki-e/cargo-llvm-cov" = "0.9.1"
+"cargo:cargo-mutants" = "27.1.0"
+cargo-deny = "0.20.2"
+editorconfig-checker = "4.0.2"
+node = "24.21.0"
+"npm:lockfile-lint" = "5.1.0"
+osv-scanner = "2.7.1"
+shfmt = "3.14.1"
+uv = "0.13.7"
+zizmor = "1.32.0"
+
+[env]
+# Tasks run the tools the lockfile installed. A missing one fails, rather than npx fetching
+# whatever package has its name.
+_.path = ["{{config_root}}/node_modules/.bin"]
+
+[tasks.format]
+run = ["oxfmt --check -c rules/oxfmt.json", "cargo fmt --check", "shfmt --diff ."]
+
+[tasks.lint]
+run = [
+  "oxlint",
+  "cargo clippy --all-targets --all-features",
+  "cargo deny check",
+  "node rules/rust-lints.ts --elite Cargo.toml template/Cargo.toml.jinja",
+  "node rules/lint-styles.ts",
+  "node theme/themes/build.ts --check",
+  "knip",
+  "editorconfig-checker",
+]
+
+[tasks.typecheck]
+run = "tsc --noEmit"
+
+[tasks.build]
+run = "npm run build"
+
+[tasks.test]
+description = "The unit tests on their coverage floors; grantOrbit's test starts Postgres in Docker, which must answer"
+# The entry tests load the build, as a consumer does. The crate's tests run under coverage, held
+# to the floors in server/coverage.json.
+depends = ["build"]
+run = ["npm test", "node testing/src/floors/rust.ts"]
+
+[tasks."mutants:rust"]
+description = "Mutation tests of the limiter and the Stripe client, each file held to its floor in mutants.json; a pull request passes --in-diff <its diff>"
+run = "node testing/src/floors/mutants.ts"
+
+[tasks.workflows]
+run = ["actionlint", "zizmor --persona pedantic .github/workflows"]
+
+[tasks.template]
+description = "The Copier template, rendered public and private, each with the files it should have"
+run = '''
+set -eu
+work=$(mktemp -d)
+kit=$(pwd)
+trap 'rm -rf "$work"' EXIT
+fail() {
+  echo "template: $*"
+  exit 1
+}
+render() {
+  name=$1
+  shift
+  uvx copier@9.19.1 copy --quiet --defaults --trust --vcs-ref HEAD --data "name=$name" \
+    --data 'description=A repo the template check renders.' "$@" . "$work/$name" 2> /dev/null
+}
+has() {
+  for file in "$@"; do
+    [ -e "$work/$repo/$file" ] || fail "$repo lacks $file"
+  done
+}
+lacks() {
+  for file in "$@"; do
+    [ ! -e "$work/$repo/$file" ] || fail "$repo should not have $file"
+  done
+}
+render public --data private=false --data rust=false
+render pages --data private=false --data rust=true --data pages=true
+render private --data private=true --data rust=true
+everyone='.gitignore'
+public='LICENSE SECURITY.md CONTRIBUTING.md .github/ISSUE_TEMPLATE/bug.yml release-please-config.json .release-please-manifest.json .github/workflows/ci.yml .github/workflows/release.yml'
+private='.githooks/pre-commit .githooks/pre-push .gitleaks.toml'
+rust='Cargo.toml deny.toml rust-toolchain.toml clippy.toml'
+for repo in public pages private; do
+  case $repo in
+    public) has $everyone $public; lacks $private $rust ;;
+    pages) has $everyone $public $rust; lacks $private ;;
+    private) has $everyone $private $rust; lacks $public .github/workflows ;;
+  esac
+  # A new repo never tracks what its installs and builds write, or Finder's files.
+  ignored='node_modules/x out/x dist/x .DS_Store'
+  [ "$repo" = public ] || ignored="$ignored target/x"
+  git -C "$work/$repo" init -q
+  for path in $ignored; do
+    git -C "$work/$repo" check-ignore -q "$path" || fail "$repo's .gitignore doesn't ignore $path"
+  done
+  # A Rust repo starts on kit's lints and disallowed paths.
+  [ "$repo" = public ] || (cd "$work/$repo" && node "$kit/rules/rust-lints.ts" > /dev/null) \
+    || fail "$repo's lints aren't kit's"
+  answer=false
+  [ "$repo" = private ] && answer=true
+  grep -q "^private: $answer$" "$work/$repo/.copier-answers.yml" || fail "$repo's answers lack private: $answer"
+  if [ -d "$work/$repo/.github/workflows" ]; then
+    (cd "$work/$repo" && actionlint .github/workflows/*.yml && zizmor --quiet --persona pedantic .github/workflows)
+  fi
+  # A new repo starts formatted as kit's formatter writes it, so its first check passes.
+  oxfmt --check -c rules/oxfmt.json "$work/$repo" > /dev/null || fail "$repo isn't formatted as oxfmt writes it"
+done
+grep -q '^gitleaks = ' "$work/private/mise.toml" || fail 'private has no gitleaks'
+# A private repo's checks run in its hooks, which git runs only when they are executable.
+for hook in pre-commit pre-push; do
+  [ -x "$work/private/.githooks/$hook" ] || fail "private's $hook hook isn't executable"
+done
+grep -q '^run = "git config core.hooksPath .githooks"$' "$work/private/mise.toml" \
+  || fail "private's hooks task doesn't turn on .githooks"
+# Every repo audits its supply chain as kit's own audit does, to the same licences.
+licences=$(grep -o -- '--licenses=[^ "]*' mise.toml)
+for repo in public pages private; do
+  [ -e "$work/$repo/osv-scanner.toml" ] || fail "$repo lacks osv-scanner.toml"
+  for command in 'npm audit signatures' \
+    'lockfile-lint --path package-lock.json --allowed-hosts npm --validate-https' \
+    "osv-scanner scan source --config osv-scanner.toml --lockfile package-lock.json $licences"; do
+    grep -q -F "\"$command\"" "$work/$repo/mise.toml" || fail "$repo's audit doesn't run $command"
+  done
+done
+# kit's own workflows are pinned to the commit the repo was made from, as every action is.
+version=$(sed -n 's/^_commit: //p' "$work/public/.copier-answers.yml")
+for file in ci.yml release.yml; do
+  grep -q -E "^    uses: tonalisk-labs/kit/\.github/workflows/[a-z]+\.yml@[0-9a-f]{40} # $version$" \
+    "$work/public/.github/workflows/$file" || fail "$file doesn't pin kit's workflow to a commit"
+done
+grep -q -E '^  group: ci-[$][{][{] github[.]ref [}][}]$' "$work/public/.github/workflows/ci.yml" \
+  || fail "ci.yml's concurrency group lost its expression"
+'''
+[tasks.downstream]
+description = "This build of kit under each site's own check, from the repos beside kit: CI checks out the public ones"
+run = """
+set -eu
+pack=$(mktemp -d)
+trap 'rm -rf "$pack"' EXIT
+npm pack --silent --pack-destination "$pack" > /dev/null
+tarball=$(ls "$pack"/*.tgz)
+checked=0
+failed=''
+for repo in astronotes.eu marcoferra.com teoria-musical.com; do
+  dir="${KIT_DOWNSTREAM:-..}/$repo"
+  if [ ! -d "$dir" ]; then
+    echo "downstream: no $repo beside kit, skipped"
+    continue
+  fi
+  checked=$((checked + 1))
+  status=0
+  (cd "$dir" && npm install --no-save --no-audit --no-fund "$tarball" && mise run check) || status=$?
+  (cd "$dir" && npm ci --no-audit --no-fund --silent)
+  [ "$status" -eq 0 ] || failed="$failed $repo"
+done
+[ "$checked" -gt 0 ] || { echo 'downstream: no repo to check'; exit 1; }
+[ -z "$failed" ] || { echo "downstream: failed in$failed"; exit 1; }
+"""
+
+# The template's audit, on kit's own tree, which every repo installs; and the Renovate preset holds
+# a new npm or crate release for 3 days, so a hijacked one can be pulled before it is proposed.
+[tasks.audit]
+run = [
+  "npm audit --audit-level=info",
+  "npm audit signatures",
+  "lockfile-lint --path package-lock.json --allowed-hosts npm --validate-https",
+  "osv-scanner scan source --config template/osv-scanner.toml --lockfile package-lock.json --licenses=MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause,ISC,Unicode-3.0,Zlib,CDLA-Permissive-2.0,0BSD,BlueOak-1.0.0,CC0-1.0,Python-2.0",
+  "jq -e '.extends | index(\"security:minimumReleaseAgeNpm\") and index(\"security:minimumReleaseAgeCrate\")' default.json > /dev/null",
+]
+
+[tasks.check]
+description = "Every check a pull request runs"
+depends = ["format", "lint", "typecheck", "test", "workflows", "template", "audit"]
+
+[tasks.release-check]
+description = "The gate before a release is attested"
+depends = ["check", "mutants:rust"]
+
+[tasks.artifacts]
+description = "The release files: the npm tarball, the crate's source and the Copier template"
+run = [
+  "rm -rf out && mkdir out",
+  "npm pack --pack-destination out",
+  "git archive --format=tar.gz --prefix=kit-server/ -o out/kit-server.tar.gz HEAD:server",
+  "git archive --format=tar.gz --prefix=template/ -o out/template.tar.gz HEAD:template",
+]

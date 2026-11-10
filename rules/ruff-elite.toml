@@ -1,0 +1,6 @@
+# The elite limits on kit's Ruff rules: a repo's ruff.toml extends this once its code meets them,
+# in place of ruff.toml.
+extend = "ruff.toml"
+
+[lint.mccabe]
+max-complexity = 10

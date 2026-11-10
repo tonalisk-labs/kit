@@ -1,0 +1,56 @@
+# The lints every tonalisk-labs crate is built under. Cargo reads a lint table only from a
+# manifest, so each workspace repeats these as its [workspace.lints.rust] and
+# [workspace.lints.clippy], and `kit-rust-lints` fails one that leaves any out or sets it otherwise.
+# A repo may add denials of its own; it relaxes one of these only by naming it to the check.
+
+[rust]
+unsafe_code = "forbid"
+warnings = { level = "deny", priority = -1 }
+future_incompatible = { level = "deny", priority = -1 }
+rust_2018_idioms = { level = "deny", priority = -1 }
+unused = { level = "deny", priority = -1 }
+let_underscore_drop = "deny"
+missing_debug_implementations = "deny"
+missing_docs = "deny"
+non_ascii_idents = "deny"
+trivial_casts = "deny"
+trivial_numeric_casts = "deny"
+unreachable_pub = "deny"
+unused_qualifications = "deny"
+
+[clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+cargo = { level = "deny", priority = -1 }
+# Every panicking path is denied by name; the shipped binary has no unwind path to reach.
+arithmetic_side_effects = "deny"
+expect_used = "deny"
+indexing_slicing = "deny"
+panic = "deny"
+string_slice = "deny"
+unwrap_used = "deny"
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+exit = "deny"
+mem_forget = "deny"
+str_to_string = "deny"
+verbose_file_reads = "deny"
+# A conversion says what it does when the value doesn't fit; `as` truncates, wraps or rounds
+# without a word.
+as_conversions = "deny"
+# An error turned into another keeps what went wrong, and a Result dropped for an Option is
+# handled instead.
+map_err_ignore = "deny"
+unused_result_ok = "deny"
+# A lint allowed in the code says why.
+allow_attributes_without_reason = "deny"
+# pub(crate) trips this where plain pub trips rustc's unreachable_pub; pub(crate) is truthful.
+redundant_pub_crate = "allow"
+# Duplicate transitive versions are gated by deny.toml's [bans], not per crate.
+multiple_crate_versions = "allow"
+# A doc comment says what the code can't; a plain Result or panic-free code needs none.
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"

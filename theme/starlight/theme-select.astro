@@ -1,0 +1,34 @@
+---
+// Starlight's light/dark select, and beside it, where the site lets visitors choose, the
+// colour theme, drawn with Starlight's own select.
+import Default from '@astrojs/starlight/components/ThemeSelect.astro';
+import Select from '@astrojs/starlight/components/Select.astro';
+import { themeConfig } from 'virtual:@tonalisk-labs/kit/themes';
+
+import { choices } from '@tonalisk-labs/kit/theme';
+
+const portuguese = Astro.locals.starlightRoute.lang.startsWith('pt');
+const label = portuguese ? 'Tema de cores' : 'Colour theme';
+const options = choices(themeConfig).map(({ id, label: name }) => ({
+  value: id,
+  label: id === 'default' && portuguese ? 'Predefinido' : name,
+  selected: id === themeConfig.theme,
+}));
+---
+
+<Default />
+{
+  themeConfig.userThemes && (
+    <span data-theme-menu class="contents">
+      <Select icon="star" label={label} width="9em" options={options} />
+    </span>
+  )
+}
+
+<script>
+  import { themeConfig } from 'virtual:@tonalisk-labs/kit/themes';
+
+  import { bindThemeMenus } from '@tonalisk-labs/kit/theme';
+
+  bindThemeMenus(themeConfig);
+</script>

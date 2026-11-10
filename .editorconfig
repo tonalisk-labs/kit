@@ -1,0 +1,37 @@
+root = true
+
+# The same values as kit's oxfmt rules.
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+max_line_length = 100
+
+# Two trailing spaces are a Markdown line break.
+[*.md]
+trim_trailing_whitespace = false
+
+# ruff, rustfmt and swift-format indent by four.
+[*.{py,rs,swift}]
+indent_size = 4
+
+# shfmt policy, mirroring shfmt -bn -ci -sr.
+[*.sh]
+indent_style = tab
+binary_next_line = true
+switch_case_indent = true
+space_redirects = true
+
+# Git's hooks, shell scripts without the extension.
+[template/.githooks/*]
+indent_style = tab
+binary_next_line = true
+switch_case_indent = true
+space_redirects = true
+
+# Installed packages and build output, which shfmt and editors leave alone.
+[{node_modules,dist,target,coverage}/**]
+ignore = true

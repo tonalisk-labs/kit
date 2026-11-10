@@ -1,0 +1,6 @@
+# cargo mutants: kit-server's limits and its Stripe client, each file held to its floor in
+# mutants.json by kit-mutants-rust. A mutant shown equivalent is excluded here, with the reason.
+output = "target"
+# A mutant that leaves a name unused still builds: the lints judge the code, not its mutants.
+cap_lints = true
+examine_globs = ["server/src/limit.rs", "server/src/stripe.rs"]

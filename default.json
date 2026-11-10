@@ -1,0 +1,33 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "The tonalisk-labs repos' updates, extended as github>tonalisk-labs/kit",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":semanticCommits",
+    "security:minimumReleaseAgeNpm",
+    "security:minimumReleaseAgeCrate"
+  ],
+  "schedule": ["before 6am on monday"],
+  "timezone": "Europe/London",
+  "lockFileMaintenance": { "enabled": true },
+  "packageRules": [
+    {
+      "description": "Every non-major update in one weekly PR, so a dozen bumps cost one check run.",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "non-major dependencies"
+    },
+    {
+      "description": "kit's npm package, crate tag and workflows move together and merge once checks pass; a major waits for review.",
+      "matchPackageNames": ["@tonalisk-labs/kit", "kit-server", "tonalisk-labs/kit"],
+      "groupName": "kit",
+      "schedule": ["at any time"],
+      "automerge": true
+    },
+    {
+      "matchPackageNames": ["@tonalisk-labs/kit", "kit-server", "tonalisk-labs/kit"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": ["testing/src", "testing/perf-budgets.json", "theme", "rules"],
+  "exclude": ["**/tests", "theme/themes/build.ts"]
+}

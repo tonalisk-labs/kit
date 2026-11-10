@@ -1,0 +1,119 @@
+/* The Starlight sites: Starlight keeps its own reset and look, and Tailwind adds its theme, the
+   semantic scales and its utilities, without preflight. */
+@layer base, starlight, theme, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import './theme.css';
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+/* Only the shared Starlight components are scanned: Starlight styles the rest itself. */
+@source './starlight';
+
+/* Starlight marks dark mode with data-theme="dark" on <html>. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* Starlight's text: the site's own font (--font-body, from kit's siteFont) where its config chose
+   one, the system stack (font-sans) otherwise. */
+:root {
+  --sl-font: var(--font-body, var(--font-sans));
+}
+
+@layer base {
+  html {
+    font-size: 110%;
+  }
+}
+
+/* The contents column precedes the page in the source; pinned to the row's end, it stays put while
+   a slow page arrives. Below Starlight's two-column width, it spans the row and this is 0. */
+.right-sidebar-container {
+  margin-inline-start: auto;
+}
+
+/* Starlight's accent is primary in every theme, at 7:1 for its text (WCAG AAA) in light and dark; a
+   Pantone theme takes its greys from slate as well. Starlight is dark unless data-theme="light". */
+:root {
+  --sl-color-accent-low: var(--color-primary-950);
+  --sl-color-accent: var(--color-primary-600);
+  --sl-color-accent-high: var(--color-primary-200);
+}
+
+/* Starlight's dark text greys at 7:1, its text on inline code and its muted text (the contents) on
+   the page and the nav: Tailwind's gray, the nearest to Starlight's hue, as a theme's slate. */
+:root:not([data-theme='light']) {
+  --sl-color-gray-2: var(--color-gray-200);
+  --sl-color-gray-3: var(--color-gray-300);
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: var(--color-primary-100);
+  --sl-color-accent: var(--color-primary-800);
+  --sl-color-accent-high: var(--color-primary-900);
+}
+
+:root[data-palette] {
+  --sl-color-white: var(--color-white);
+  --sl-color-gray-1: var(--color-slate-100);
+  --sl-color-gray-2: var(--color-slate-200);
+  --sl-color-gray-3: var(--color-slate-300);
+  --sl-color-gray-4: var(--color-slate-600);
+  --sl-color-gray-5: var(--color-slate-700);
+  --sl-color-gray-6: var(--color-slate-800);
+  --sl-color-black: var(--color-slate-900);
+}
+
+:root[data-palette][data-theme='light'] {
+  --sl-color-white: var(--color-slate-900);
+  --sl-color-gray-1: var(--color-slate-800);
+  --sl-color-gray-2: var(--color-slate-700);
+  --sl-color-gray-3: var(--color-slate-600);
+  --sl-color-gray-4: var(--color-slate-500);
+  --sl-color-gray-5: var(--color-slate-300);
+  --sl-color-gray-6: var(--color-slate-100);
+  --sl-color-gray-7: var(--color-slate-50);
+  --sl-color-black: var(--color-white);
+}
+
+/* Same-site page loads cross-fade, unless motion is reduced; the browser does it, no script. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+
+/* The shared looks of ui.ts, on Starlight's own markup. */
+@layer components {
+  /* The pill button with depth; it presses darker, so white text keeps 7:1 in every theme. */
+  .sl-link-button.primary {
+    @apply bg-primary-800 border-primary-800 text-white shadow-sm inset-shadow-2xs inset-shadow-white/25 transition duration-150 ease-out;
+    @apply hover:bg-primary-900 hover:border-primary-900 hover:text-white;
+  }
+
+  .sl-link-card {
+    @apply rounded-2xl shadow-sm transition duration-300 ease-out hover:shadow-lg motion-safe:hover:-translate-y-0.5;
+  }
+
+  /* DISPLAY and LEAD on the page title and the splash hero, and tight, balanced headings in the
+     prose. */
+  h1#_top,
+  .hero h1 {
+    @apply text-4xl font-bold tracking-tight text-balance sm:text-5xl;
+  }
+
+  .hero .tagline {
+    @apply text-lg/relaxed text-pretty;
+  }
+
+  .sl-markdown-content :is(h1, h2, h3) {
+    @apply tracking-tight text-balance;
+  }
+
+  /* A wide table scrolls in its region (starlight/tables.ts), which a keyboard reaches; Starlight
+     scrolls the table itself, which it cannot. */
+  .sl-markdown-content [data-table-scroll] {
+    overflow-x: auto;
+  }
+
+  .sl-markdown-content [data-table-scroll] > table {
+    display: table;
+    overflow: visible;
+  }
+}

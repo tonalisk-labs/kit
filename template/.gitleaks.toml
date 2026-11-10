@@ -1,0 +1,4 @@
+# gitleaks' own rules. A value that only looks like a secret, such as a public key's fingerprint,
+# gets a narrow allowlist here, with the reason.
+[extend]
+useDefault = true

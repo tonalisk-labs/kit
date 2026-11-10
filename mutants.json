@@ -1,0 +1,4 @@
+{
+  "server/src/limit.rs": 100,
+  "server/src/stripe.rs": 100
+}

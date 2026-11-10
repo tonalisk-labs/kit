@@ -1,0 +1,25 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+# kit's workflow bounds each of its jobs with timeout-minutes, which a calling job can't set.
+jobs:
+  release:
+    uses: tonalisk-labs/kit/.github/workflows/release.yml@{{ _copier_conf.vcs_ref_hash }} # {{ _commit }}
+    permissions:
+      contents: write # to tag and attach the release
+      id-token: write # to sign the attestations
+      attestations: write # to store the attestations
+{%- if pages %}
+      pages: write # to deploy the site
+    with:
+      pages: true
+{%- endif %}

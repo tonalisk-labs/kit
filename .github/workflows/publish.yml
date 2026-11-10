@@ -1,0 +1,23 @@
+# kit's releases, published to npm by trusted publishing: npmjs.com names this file as the package's
+# trusted publisher, so the workflow holds no npm token.
+name: publish
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  release:
+    uses: ./.github/workflows/release.yml
+    permissions:
+      contents: write # to tag and attach the release
+      id-token: write # to sign the attestations, and to publish to npm through trusted publishing
+      attestations: write # to store the attestations
+    with:
+      npm: true
