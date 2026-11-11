@@ -89,10 +89,12 @@ const lookupsOf = (call: Call): Pick<Runtime, 'addresses' | 'labelled'> => ({
         }),
       ),
     ),
+  // A listing cuts each id to 12 characters unless told not to, and a create answers it whole.
   labelled: async (key) =>
     labelledIn(
       await call('list', [
         '--all',
+        '--no-trunc',
         '--filter',
         `label=${key}`,
         '--format',
