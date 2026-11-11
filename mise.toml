@@ -85,7 +85,7 @@ render public --data private=false --data rust=false
 render pages --data private=false --data rust=true --data pages=true
 render private --data private=true --data rust=true
 everyone='.gitignore'
-public='LICENSE SECURITY.md CONTRIBUTING.md .github/ISSUE_TEMPLATE/bug.yml release-please-config.json .release-please-manifest.json .github/workflows/ci.yml .github/workflows/release.yml'
+public='LICENSE SECURITY.md CONTRIBUTING.md .github/ISSUE_TEMPLATE/bug.yml release-please-config.json .release-please-manifest.json .prettierignore .github/workflows/ci.yml .github/workflows/release.yml'
 private='.githooks/pre-commit .githooks/pre-push .gitleaks.toml'
 rust='Cargo.toml deny.toml rust-toolchain.toml clippy.toml'
 for repo in public pages private; do

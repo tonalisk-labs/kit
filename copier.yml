@@ -17,6 +17,7 @@ _exclude:
   - '{% if private %}.github{% endif %}'
   - '{% if private %}release-please-config.json{% endif %}'
   - '{% if private %}.release-please-manifest.json{% endif %}'
+  - '{% if private %}.prettierignore{% endif %}'
   # A public repo has GitHub's secret scanning and CI instead.
   - '{% if not private %}.gitleaks.toml{% endif %}'
   - '{% if not private %}.githooks{% endif %}'
