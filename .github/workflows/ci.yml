@@ -14,8 +14,6 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# Each job's timeout-minutes ends a runner or download that has hung, which GitHub would
-# otherwise hold for 6 hours.
 jobs:
   checks:
     uses: ./.github/workflows/checks.yml
@@ -23,36 +21,5 @@ jobs:
       contents: read # to check out the code
       pull-requests: read # to read the pull request's title
 
-  # Once per release, on release-please's pull request: this build under each public repo's
-  # own check. A private one runs `mise run downstream` on its maintainer's machine.
-  downstream:
-    name: downstream repos
-    if: startsWith(github.head_ref, 'release-please--')
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    permissions:
-      contents: read # to check out kit and the public repos
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          path: kit
-          persist-credentials: false
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: tonalisk-labs/marcoferra.com
-          path: marcoferra.com
-          persist-credentials: false
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: tonalisk-labs/teoria-musical.com
-          path: teoria-musical.com
-          persist-credentials: false
-      # One mise release on every runner, its latest, so each job runs the same task runner.
-      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
-        with:
-          version: 2026.11.6
-          working_directory: kit
-      - run: npm ci
-        working-directory: kit
-      - run: mise run downstream
-        working-directory: kit
+  # downstream, this build under each site's own check, returns as each site reaches GitHub with its
+  # code and kit 1.0.2 pinned: marcoferra.com, teoria-musical.com, then astronotes.eu (private).

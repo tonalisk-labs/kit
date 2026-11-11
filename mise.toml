@@ -137,7 +137,7 @@ grep -q -E '^  group: ci-[$][{][{] github[.]ref [}][}]$' "$work/public/.github/w
   || fail "ci.yml's concurrency group lost its expression"
 '''
 [tasks.downstream]
-description = "This build of kit under each site's own check, from the repos beside kit: CI checks out the public ones"
+description = "This build of kit under each site's own check, from the repos beside kit"
 run = """
 set -eu
 pack=$(mktemp -d)
