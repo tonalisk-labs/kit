@@ -27,10 +27,24 @@ interface Holder {
   readonly container: string;
 }
 
+/** Every run this file starts: each still going holds the file open, so every test ends them. */
+const runs: ChildProcess[] = [];
+
+/** Kills `run` and waits for its end, at once if it has ended already. */
+const end = async (run: ChildProcess): Promise<void> => {
+  if (run.exitCode !== null || run.signalCode !== null) {
+    return;
+  }
+  const ended = once(run, 'exit');
+  run.kill('SIGKILL');
+  await ended;
+};
+
 const hold = async (): Promise<Holder> => {
   const run = spawn(process.execPath, ['--input-type=module', '--eval', HOLDER], {
     stdio: ['ignore', 'pipe', 'inherit'],
   });
+  runs.push(run);
   const lines = createInterface({ input: run.stdout });
   const said = once(lines, 'line').then(([line]: unknown[]) => String(line));
   const gave = once(run, 'exit').then(([code]: unknown[]): never => {
@@ -63,23 +77,22 @@ await test('a container is left behind once its run on this host is gone, and no
 });
 
 await test('a killed run’s container goes with the next sweep, and a live run’s stays', async () => {
-  const [killed, live] = await Promise.all([hold(), hold()]);
   try {
+    const [killed, live] = await Promise.all([hold(), hold()]);
     const [owner, pid] = ((await labelOf(killed.container)) ?? '').split(' ');
     assert.equal(owner, hostname());
     assert.equal(pid, String(killed.run.pid));
-    const ended = once(killed.run, 'exit');
-    killed.run.kill('SIGKILL');
-    await ended;
+    await end(killed.run);
     assert.equal(await exists(killed.container), true, 'no exit handler ran');
     await sweepLeftBehind();
     assert.equal(await exists(killed.container), false, 'swept, its run gone');
     assert.equal(await exists(live.container), true, 'kept, its run still going');
+    await end(live.run);
+    await sweepLeftBehind();
+    assert.equal(await exists(live.container), false, 'swept once its run is gone too');
   } finally {
-    const ended = once(live.run, 'exit');
-    live.run.kill('SIGKILL');
-    await ended;
+    // A failed assertion or a failed start leaves runs going; ended, they free this file to exit.
+    await Promise.all(runs.map(async (run) => end(run)));
     await sweepLeftBehind();
   }
-  assert.equal(await exists(live.container), false);
 });
