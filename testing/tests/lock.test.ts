@@ -4,6 +4,8 @@ import { createServer } from 'node:http';
 import { test } from 'node:test';
 
 import { HOST_ENV, holdBrowserSeat } from '../src/stack/control.ts';
+import { answerHolders, holderOf } from '../src/stack/gate-server.ts';
+import { openHold } from '../src/stack/hold.ts';
 import { seatPool, stackLocks } from '../src/stack/lock.ts';
 
 const flush = async (): Promise<void> =>
@@ -90,7 +92,11 @@ const withPool = async (size: number, work: () => Promise<void>): Promise<void> 
   const pooled = seatPool(size);
   const server = createServer((incoming, outgoing) => {
     incoming.resume();
-    pooled(outgoing, (incoming.url ?? '').split('/')[2] ?? '');
+    if (incoming.url === '/holders') {
+      answerHolders(outgoing);
+      return;
+    }
+    pooled(outgoing, (incoming.url ?? '').split('/')[2] ?? '', holderOf(incoming));
   });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
@@ -117,4 +123,21 @@ await test('a worker takes every seat it declares at once, and one asking more t
     one();
     three();
     still();
+  }));
+
+/** A refusal no test here expects. */
+const refused = (): string => 'refused';
+
+await test('a seat wait past its bound fails, naming who holds the seats and who waits', async () =>
+  withPool(2, async () => {
+    const url = new URL('/browser/2', process.env[HOST_ENV]);
+    const idle = await openHold(url, { held: 'seats', refused }, { who: 'an idle worker' });
+    try {
+      await assert.rejects(
+        openHold(url, { held: 'seats', refused, bound: 50 }, { who: 'a visual test' }),
+        /^Error: seats was not granted within 0\.05 s: at its server, 2 of the Linux browsers' 2 seats held by an idle worker for \d+ s; 2 of the Linux browsers' 2 seats waited for by a visual test for \d+ s$/u,
+      );
+    } finally {
+      idle();
+    }
   }));

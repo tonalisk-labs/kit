@@ -5,6 +5,8 @@ import { once } from 'node:events';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { availableParallelism } from 'node:os';
 
+import { HOLDER_HEADER } from './hold.ts';
+
 /** The fixed local port the machine's one CPU gate listens on: every run finds it there. */
 export const GATE_PORT = 47_391;
 
@@ -26,16 +28,47 @@ export const SLOTS = availableParallelism();
 /** The last segment of a turn's path that asks for every slot: a measurement load would skew. */
 export const WHOLE = 'whole';
 
+/** A hold this process serves, held or waited for, by whom and since when (epoch ms). */
+export interface Holding {
+  readonly what: string;
+  readonly who: string;
+  since: number;
+  held: boolean;
+}
+
+/** Every hold this process serves, so a wait past its bound can name who holds and who waits. */
+const holdings = new Set<Holding>();
+
+/** A hold a server serves: how it is taken and given back, what it is, and who asked for it. */
+export interface Served {
+  readonly take: (gone: AbortSignal) => Promise<void>;
+  readonly give: () => void;
+  readonly what: string;
+  readonly who: string;
+}
+
+/** The holder a request names, or that it named none. */
+export const holderOf = (incoming: IncomingMessage): string => {
+  const named = incoming.headers[HOLDER_HEADER];
+  return typeof named === 'string' && named !== '' ? named : 'an unnamed holder';
+};
+
+/** Answers a GET /holders with this process's holdings, as JSON. */
+export const answerHolders = (outgoing: ServerResponse): void => {
+  outgoing
+    .writeHead(200, { 'content-type': 'application/json' })
+    .end(JSON.stringify([...holdings]));
+};
+
 /** A hold (a stack lock, a CPU turn) lasts as long as its request stays open: granted with the
  *  response head, given back when the caller closes it, however its worker ends. */
-export const holdOpen = (
-  outgoing: ServerResponse,
-  take: (gone: AbortSignal) => Promise<void>,
-  give: () => void,
-): void => {
+export const holdOpen = (outgoing: ServerResponse, { take, give, what, who }: Served): void => {
   const gone = new AbortController();
   const granted = { now: false };
+  const holding: Holding = { what, who, since: Date.now(), held: false };
+  holdings.add(holding);
   outgoing.once('close', () => {
+    holdings.delete(holding);
     gone.abort();
     if (granted.now) {
       give();
@@ -49,6 +82,8 @@ export const holdOpen = (
         return;
       }
       granted.now = true;
+      holding.held = true;
+      holding.since = Date.now();
       outgoing.writeHead(200).flushHeaders();
     })
     .catch((error: unknown) => {
@@ -171,18 +206,19 @@ interface Runs {
  *  for a run never seen, whose gate was stopped and which is rejoining this one. */
 const turnFor = (
   runs: Runs,
-  { run, size }: { readonly run: string; readonly size: string },
+  { run, size, who }: { readonly run: string; readonly size: string; readonly who: string },
   outgoing: ServerResponse,
 ): void => {
   if (runs.members.has(run)) {
     const asked = size === WHOLE ? runs.slots : 1;
-    holdOpen(
-      outgoing,
-      async (gone) => runs.turns.take(run, asked, gone),
-      () => {
+    holdOpen(outgoing, {
+      take: async (gone) => runs.turns.take(run, asked, gone),
+      give: () => {
         runs.turns.give(asked);
       },
-    );
+      what: `${String(asked)} of the CPU gate's slots for run ${run}`,
+      who,
+    });
   } else if (runs.left.has(run)) {
     outgoing.writeHead(410).end(`no cpu for ${run}, which has left`);
   } else {
@@ -196,7 +232,9 @@ const answer =
     const [, action = '', encoded = '', size = ''] = (incoming.url ?? '').split('/');
     const run = decodeURIComponent(encoded);
     incoming.resume();
-    if (run === '') {
+    if (action === 'holders') {
+      answerHolders(outgoing);
+    } else if (run === '') {
       outgoing.writeHead(404).end(`no run named for ${action}`);
     } else if (action === 'join') {
       gate.hold(run);
@@ -205,7 +243,7 @@ const answer =
       });
       outgoing.writeHead(200, { [GATE_MARK]: GATE_VERSION }).flushHeaders();
     } else if (action === 'cpu') {
-      turnFor(runs, { run, size }, outgoing);
+      turnFor(runs, { run, size, who: holderOf(incoming) }, outgoing);
     } else {
       outgoing.writeHead(404).end(`no ${action} for ${run}, which has not joined`);
     }

@@ -65,6 +65,19 @@ export const control = async (action: Action, key: string): Promise<Record<strin
   return promise;
 };
 
+/** Who asks for a hold, for its server's holder record: the running test, if any, its worker and
+ *  its process, so a wait past its bound names who held what. */
+const holderName = (): string => {
+  const worker = process.env['TEST_WORKER_INDEX'];
+  const where = `${worker === undefined ? '' : `worker ${worker}, `}pid ${String(process.pid)}`;
+  try {
+    const info = test.info();
+    return `${info.project.name} › ${info.title} (${where})`;
+  } catch {
+    return where;
+  }
+};
+
 /**
  * Holds a target's stack, shared or owned alone, until the returned release is called: the hold
  * is an open request, so a worker that dies releases it by closing its connection.
@@ -79,6 +92,7 @@ export const holdStack = async (hold: 'share' | 'own', key: string): Promise<() 
       held: `a ${hold} hold on ${key}`,
       refused: () => `the stack host refused a ${hold} hold on ${key}`,
     },
+    { who: holderName() },
   );
 
 /** A seat among the Linux image's browsers for each context the worker's tests have open at once,
@@ -96,6 +110,7 @@ export const holdBrowserSeat = async (contexts: number): Promise<() => void> =>
           ? `the Linux browsers seat fewer than the ${String(contexts)} browserContexts declared`
           : 'the stack host refused seats among the Linux browsers',
     },
+    { who: holderName() },
   );
 
 const runTurns = (): string => required(CPU_GATE_ENV, 'the global setup joins the CPU gate');
@@ -108,7 +123,7 @@ const TURN: HoldKind = {
 
 /** A CPU turn, until the returned release; an abort gives up a turn still waiting. */
 export const holdTurn = async (turns: string, signal?: AbortSignal): Promise<() => void> =>
-  openHold(new URL(turns), TURN, signal);
+  openHold(new URL(turns), TURN, { signal, who: holderName() });
 
 /** A test's CPU turn: its release, its widening once claimed, and the test's end, which gives up
  *  a widening still waiting, so no every-slot turn is granted after its test. */

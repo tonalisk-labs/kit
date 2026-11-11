@@ -11,10 +11,12 @@ import {
 } from 'node:http';
 
 import {
+  answerHolders,
   GATE_MARK,
   GATE_PORT,
   GATE_SCRIPT,
   GATE_VERSION,
+  holderOf,
   holdOpen,
   LAUNCH,
   SERVES,
@@ -183,7 +185,7 @@ const notYet = (error: unknown): boolean => isAbsent(error) || statusOf(error) =
  *  can't give it. One the gate ends cuts the holder's off, or ends it whole once the run let go. */
 const turnAtGate = async (
   held: Held,
-  asked: { readonly whole: boolean; readonly holder: ServerResponse },
+  asked: { readonly whole: boolean; readonly holder: ServerResponse; readonly who: string },
   gone: AbortSignal,
 ): Promise<() => void> => {
   const { promise: changed } = held.changed;
@@ -201,7 +203,7 @@ const turnAtGate = async (
     },
   };
   try {
-    return await openHold(url, kind, gone);
+    return await openHold(url, kind, { signal: gone, who: asked.who });
   } catch (error) {
     if (held.left || !notYet(error)) {
       throw held.left ? new Error('the run has left the CPU gate', { cause: held.reason }) : error;
@@ -216,17 +218,22 @@ const turnAtGate = async (
 const serveTurns = async (held: Held): Promise<Server> => {
   const server = createServer({ requestTimeout: 0 }, (incoming, holder) => {
     incoming.resume();
-    const asked = { whole: incoming.url === `/cpu/${WHOLE}`, holder };
+    if (incoming.url === '/holders') {
+      answerHolders(holder);
+      return;
+    }
+    const asked = { whole: incoming.url === `/cpu/${WHOLE}`, holder, who: holderOf(incoming) };
     const turn = { release: (): void => undefined };
-    holdOpen(
-      holder,
-      async (gone) => {
+    holdOpen(holder, {
+      take: async (gone) => {
         turn.release = await turnAtGate(held, asked, gone);
       },
-      () => {
+      give: () => {
         turn.release();
       },
-    );
+      what: asked.whole ? 'every CPU slot' : 'a CPU turn',
+      who: asked.who,
+    });
   });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');

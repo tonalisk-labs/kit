@@ -12,7 +12,7 @@ import {
   STACK_ENV,
 } from './control.ts';
 import { joinGate, type Membership } from './gate-member.ts';
-import { holdOpen } from './gate-server.ts';
+import { answerHolders, holderOf, holdOpen } from './gate-server.ts';
 import { seatPool, stackLocks } from './lock.ts';
 import type { Service } from './process.ts';
 import { startTarget } from './stack.ts';
@@ -106,19 +106,24 @@ const handle =
   (hosted: Hosted) =>
   (incoming: IncomingMessage, outgoing: ServerResponse): void => {
     const [, action = '', key = ''] = (incoming.url ?? '').split('/');
+    if (action === 'holders') {
+      answerHolders(outgoing);
+      return;
+    }
     if (action === 'browser') {
-      browsers(outgoing, key);
+      browsers(outgoing, key, holderOf(incoming));
       return;
     }
     if (action === 'share' || action === 'own') {
       const stack = decodeURIComponent(key);
-      holdOpen(
-        outgoing,
-        async (gone) => locks.take(stack, action, gone),
-        () => {
+      holdOpen(outgoing, {
+        take: async (gone) => locks.take(stack, action, gone),
+        give: () => {
           locks.give(stack, action);
         },
-      );
+        what: `a ${action} hold on ${stack}`,
+        who: holderOf(incoming),
+      });
       return;
     }
     const called = ACTIONS.find((known) => known === action);

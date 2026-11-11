@@ -88,20 +88,23 @@ export const stackLocks = (): {
 
 /** A pool of `size` seats, a holder taking the ones it asks for all at once, in the order asked;
  *  more than the pool has is refused at once, as it could never be seated. */
-export const seatPool = (size: number): ((outgoing: ServerResponse, asked: string) => void) => {
+export const seatPool = (
+  size: number,
+): ((outgoing: ServerResponse, asked: string, who: string) => void) => {
   const pool = semaphore(size);
-  return (outgoing, asked) => {
+  return (outgoing, asked, who) => {
     const count = Number(asked);
     if (!Number.isInteger(count) || count < 1 || count > size) {
       outgoing.writeHead(400).end(`the pool seats 1 to ${String(size)} at once, not ${asked}`);
       return;
     }
-    holdOpen(
-      outgoing,
-      async (gone) => pool.take('seats', count, gone),
-      () => {
+    holdOpen(outgoing, {
+      take: async (gone) => pool.take('seats', count, gone),
+      give: () => {
         pool.give(count);
       },
-    );
+      what: `${String(count)} of the Linux browsers' ${String(size)} seats`,
+      who,
+    });
   };
 };
