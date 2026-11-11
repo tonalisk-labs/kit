@@ -46,7 +46,7 @@ run = ["oxlint", "editorconfig-checker"]
 {%- if not private %}
 
 [tasks.workflows]
-run = ["actionlint", "zizmor --persona pedantic .github/workflows"]
+run = ["actionlint", "zizmor --offline --persona pedantic .github/workflows"]
 {%- endif %}
 
 # The npm tree's advisories, the registry's signature on every package, a lockfile that names only
@@ -75,8 +75,8 @@ run = "gitleaks git --pre-commit --staged --no-banner --redact ."
 description = "Git runs the hooks in .githooks: gitleaks on each commit, the check on each push to main"
 run = "git config core.hooksPath .githooks"
 
-# A workflow added for a deploy brings actionlint and `zizmor --persona pedantic .github/workflows`
-# into the check.
+# A workflow added for a deploy brings actionlint and
+# `zizmor --offline --persona pedantic .github/workflows` into the check.
 [tasks.check]
 description = "Every check, before each push to main"
 depends = ["format", "lint", "audit", "secrets"]

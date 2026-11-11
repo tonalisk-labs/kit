@@ -49,7 +49,7 @@ description = "Mutation tests of the limiter and the Stripe client, each file he
 run = "node testing/src/floors/mutants.ts"
 
 [tasks.workflows]
-run = ["actionlint", "zizmor --persona pedantic .github/workflows"]
+run = ["actionlint", "zizmor --offline --persona pedantic .github/workflows"]
 
 [tasks.template]
 description = "The Copier template, rendered public and private, each with the files it should have"
@@ -105,7 +105,7 @@ for repo in public pages private; do
   [ "$repo" = private ] && answer=true
   grep -q "^private: $answer$" "$work/$repo/.copier-answers.yml" || fail "$repo's answers lack private: $answer"
   if [ -d "$work/$repo/.github/workflows" ]; then
-    (cd "$work/$repo" && actionlint .github/workflows/*.yml && zizmor --quiet --persona pedantic .github/workflows)
+    (cd "$work/$repo" && actionlint .github/workflows/*.yml && zizmor --offline --quiet --persona pedantic .github/workflows)
   fi
   # A new repo starts formatted as kit's formatter writes it, so its first check passes.
   oxfmt --check -c rules/oxfmt.json "$work/$repo" > /dev/null || fail "$repo isn't formatted as oxfmt writes it"
