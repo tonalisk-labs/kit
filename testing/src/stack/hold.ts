@@ -1,6 +1,6 @@
 // A hold (a stack lock, a CPU turn) is an open request: granted with the response head, and held
 // until the holder closes it, so a holder that dies gives it back.
-import { type ClientRequest, type IncomingMessage, request } from 'node:http';
+import { type ClientRequest, get, type IncomingMessage, request } from 'node:http';
 
 import { isObject } from '../unknown.ts';
 
@@ -27,19 +27,41 @@ export const described = (entry: unknown, now: number): string => {
   return `${String(what)} ${state} by ${String(who)} for ${String(seconds)} s`;
 };
 
-/** Who holds and waits at `origin`, as its GET /holders lists them, or why it couldn't say. */
-const holdersAt = async (origin: string): Promise<string> => {
-  try {
-    const answer = await fetch(new URL('/holders', origin), { signal: AbortSignal.timeout(5000) });
-    const listed: unknown = await answer.json();
-    if (!Array.isArray(listed) || listed.length === 0) {
-      return 'it records no holder or waiter';
-    }
-    const now = Date.now();
-    return listed.map((entry) => described(entry, now)).join('; ');
-  } catch (error) {
-    return `its holders could not be read: ${String(error)}`;
+/** The holdings a GET /holders listed, each named. */
+const namedIn = (listed: unknown): string => {
+  if (!Array.isArray(listed) || listed.length === 0) {
+    return 'it records no holder or waiter';
   }
+  const now = Date.now();
+  return listed.map((entry) => described(entry, now)).join('; ');
+};
+
+/** Who holds and waits at `origin`, as its GET /holders lists them, or why it couldn't say. Read
+ *  through node:http, which tells a reset as its request's error: Node 24.21's fetch (undici
+ *  7.29.1) throws it uncaught from `setTypeOfService` on macOS, ending the process. */
+const holdersAt = async (origin: string): Promise<string> => {
+  const { promise, resolve } = Promise.withResolvers<string>();
+  const failed = (error: unknown): void => {
+    resolve(`its holders could not be read: ${String(error)}`);
+  };
+  const call = get(new URL('/holders', origin), { signal: AbortSignal.timeout(5000) }, (answer) => {
+    const chunks: Buffer[] = [];
+    answer
+      .on('data', (chunk: Buffer) => {
+        chunks.push(chunk);
+      })
+      .once('end', () => {
+        try {
+          const listed: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+          resolve(namedIn(listed));
+        } catch (error) {
+          failed(error);
+        }
+      })
+      .once('error', failed);
+  });
+  call.once('error', failed);
+  return promise;
 };
 
 /** A hold refused, with the status the server answered. */
@@ -83,12 +105,13 @@ export const openHold = async (
 ): Promise<() => void> => {
   const { promise, resolve, reject } = Promise.withResolvers<() => void>();
   const headers = who === undefined ? {} : { [HOLDER_HEADER]: encodeURIComponent(who) };
-  const waiting: { failing?: Promise<void> } = {};
+  const waiting: { granted: boolean; failing?: Promise<void> } = { granted: false };
   const call = request(url, { method: 'POST', signal, headers }, (response) => {
     const { statusCode: status } = response;
     // Read: a grant, so that its server ending it whole is heard; a refusal to its end, so its
     // socket is freed, as one left unread holds the process open, and what it says is told.
     if (status === 200) {
+      waiting.granted = true;
       response.resume();
       resolve(releaseOf(call, response, kind));
       return;
@@ -105,6 +128,10 @@ export const openHold = async (
       });
   });
   call.on('error', (error) => {
+    // A granted hold's end, by its release or its server, is the release's to hear.
+    if (waiting.granted) {
+      return;
+    }
     if (signal === undefined || !signal.aborted) {
       reject(error);
       return;
