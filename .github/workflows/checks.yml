@@ -40,6 +40,16 @@ jobs:
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - if: hashFiles('package-lock.json') != ''
         run: npm ci
+      # The runner's apt reads a mirror list that puts azure.archive.ubuntu.com first, which runners
+      # could not resolve from 9 November 2026; apt goes to Ubuntu's own archives instead.
+      - run: |
+          awk -v RS= -v ORS='\n\n' '{
+            host = "archive"
+            n = split($0, line, "\n")
+            for (i = 1; i <= n; i++) if (line[i] ~ /^Suites:.*-security/) host = "security"
+            sub("mirror\\+file:/etc/apt/apt-mirrors.txt", "https://" host ".ubuntu.com/ubuntu/")
+          } 1' /etc/apt/sources.list.d/ubuntu.sources > "$RUNNER_TEMP/ubuntu.sources"
+          sudo cp "$RUNNER_TEMP/ubuntu.sources" /etc/apt/sources.list.d/ubuntu.sources
       # Playwright's browsers and their Ubuntu packages come from a cache keyed on the runner image
       # and Playwright's version: a run that finds it needs neither Ubuntu's mirrors nor the CDN.
       - id: playwright
@@ -61,15 +71,16 @@ jobs:
         run: |
           store="$HOME/.cache/playwright-apt"
           mkdir -p "$store/archives" "$store/lists"
-          # A mirror out of reach fails the run here, at once, not package by package later.
-          sudo apt-get update --error-on=any
+          # A mirror out of reach fails the run here, in seconds, not package by package later.
+          bounds=(-o Acquire::Retries=1 -o Acquire::http::Timeout=10 -o Acquire::https::Timeout=10)
+          sudo apt-get update --error-on=any "${bounds[@]}"
           # It exits 1 when it lists packages, as it does on a fresh runner.
           report=$(npx playwright install-deps --dry-run) ||
             grep -q '^Missing system dependencies' <<< "$report"
           sed -n 's/^  //p' <<< "$report" > "$store/packages"
           if [ -s "$store/packages" ]; then
             xargs sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-              --download-only < "$store/packages"
+              "${bounds[@]}" --download-only < "$store/packages"
             cp /var/cache/apt/archives/*.deb "$store/archives/"
           fi
           sudo find /var/lib/apt/lists -maxdepth 1 -type f ! -name lock \
