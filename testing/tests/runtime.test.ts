@@ -21,14 +21,15 @@ const standIn = async (name: string, script: string): Promise<string> => {
 
 const created = path.join(temporary.path, 'created');
 
-/** A docker that answers a port, a listing and a whole log at once, and never answers a create, a
- *  followed log or a followed file. */
+/** A docker that answers a port, a listing (ids cut short unless asked whole) and a whole log at
+ *  once, and never answers a create, a followed log or a followed file. */
 const docker = await standIn(
   'docker',
   `#!/bin/sh
 case "$1" in
   port) echo "127.0.0.1:55001" ;;
-  ps) printf 'abc host 7 Wed Oct 28 09:00:00 2026\\nbare \\n' ;;
+  ps) case " $* " in *" --no-trunc "*) id=abc0123456789def ;; *) id=abc012345678 ;; esac
+      printf '%s host 7 Wed Oct 28 09:00:00 2026\\nbare \\n' "$id" ;;
   logs) if [ "$2" = --follow ]; then exec sleep 600; fi; printf 'starting\\ninit complete\\n' ;;
   create | exec) exec sleep 600 ;;
   *) exit 0 ;;
@@ -204,7 +205,7 @@ await test('a log file not there yet is made by its follower, which then sees ea
   await ready;
 });
 
-await test('Docker’s published port is its address, and its listing its run labels', async () => {
+await test('Docker’s published port is its address, and its whole-id listing its run labels', async () => {
   const runtime = dockerOf({ command: docker, limits: SHORT, expiry: never });
   assert.deepEqual(
     await runtime.addresses('abc', [5432]),
@@ -213,7 +214,7 @@ await test('Docker’s published port is its address, and its listing its run la
   assert.deepEqual(
     await runtime.labelled('run'),
     new Map([
-      ['abc', 'host 7 Wed Oct 28 09:00:00 2026'],
+      ['abc0123456789def', 'host 7 Wed Oct 28 09:00:00 2026'],
       ['bare', ''],
     ]),
   );

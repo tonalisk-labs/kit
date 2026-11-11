@@ -2,14 +2,14 @@
 
 kit is public, so its Actions minutes are free. Every action is pinned to a commit.
 
-| Workflow      | Runs on                                      | What it does                                                    |
-| ------------- | -------------------------------------------- | --------------------------------------------------------------- |
-| `ci.yml`      | each pull request                            | `mise run check` and the title. On the release PR, `downstream` |
-| `publish.yml` | each push to `main`                          | `release.yml` with npm                                          |
-| `checks.yml`  | called by the public sites' CI               | `mise run check` and the title                                  |
-| `e2e.yml`     | called by the public sites' CI               | the journeys, and at release the screens on arm64               |
-| `release.yml` | called by `publish.yml` and the public sites | release-please, then the release, attested                      |
-| `pages.yml`   | called by the public sites after a release   | the site, deployed to GitHub Pages                              |
+| Workflow      | Runs on                                      | What it does                                      |
+| ------------- | -------------------------------------------- | ------------------------------------------------- |
+| `ci.yml`      | each pull request                            | `mise run check` and the title                    |
+| `publish.yml` | each push to `main`                          | `release.yml` with npm                            |
+| `checks.yml`  | called by the public sites' CI               | `mise run check` and the title                    |
+| `e2e.yml`     | called by the public sites' CI               | the journeys, and at release the screens on arm64 |
+| `release.yml` | called by `publish.yml` and the public sites | release-please, then the release, attested        |
+| `pages.yml`   | called by the public sites after a release   | the site, deployed to GitHub Pages                |
 
 A release builds with a read token only. The files are attested and attached in a job that runs
 nothing from the repo, and npm takes the package in another, through
@@ -25,4 +25,5 @@ To set npm up once:
 3. Under publishing access, require two-factor authentication and disallow tokens.
 
 A private repo runs its checks locally, where `mise run downstream` also checks this build in
-each site checked out beside kit.
+each site checked out beside kit. Until the sites are on GitHub, run it on the Mac before merging
+each release-please PR, and attach its log to the PR.

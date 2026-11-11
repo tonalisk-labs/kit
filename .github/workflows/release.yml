@@ -9,8 +9,10 @@
 # needs.
 #
 # The release PR is opened with a GitHub App's token, since a PR opened with GITHUB_TOKEN starts
-# no workflow and would never be checked. The App's id (RELEASE_APP_ID) and key (RELEASE_APP_KEY)
-# live in the calling repo's `release` environment, which reaches this job directly.
+# no workflow and would never be checked. The App's client ID (RELEASE_APP_CLIENT_ID) and key
+# (RELEASE_APP_KEY) live in the calling repo's `release` environment. A caller can't pass that
+# secret, and its own expression for it is empty, but a job here that names the environment uses
+# the environment's value once the caller passes the name, as `please` does.
 name: release
 
 on:
@@ -24,6 +26,10 @@ on:
         description: Publish out/*.tgz to npm with trusted publishing.
         type: boolean
         default: false
+    secrets:
+      RELEASE_APP_KEY:
+        description: The release App's private key, from the caller's `release` environment.
+        required: true
     outputs:
       created:
         description: Whether this run made a release.
@@ -52,10 +58,20 @@ jobs:
       created: ${{ steps.please.outputs.release_created }}
       tag: ${{ steps.please.outputs.tag_name }}
     steps:
+      # `required: true` checks only that the caller passes the name, never that it has a value.
+      - name: The release App's key has a value
+        env:
+          KEY: ${{ secrets.RELEASE_APP_KEY }}
+        run: |
+          [[ -n "${KEY}" ]] || {
+            echo "::error::RELEASE_APP_KEY is empty:" \
+              "set it in this repository's release environment"
+            exit 1
+          }
       - id: token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
-          app-id: ${{ vars.RELEASE_APP_ID }}
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_KEY }}
           permission-contents: write
           permission-pull-requests: write
@@ -74,6 +90,13 @@ jobs:
       contents: read # to check out the tagged commit
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # Its `git init` names the branch, and it checks out a detached ref on purpose: no advice.
+        env:
+          GIT_CONFIG_COUNT: '2'
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
+          GIT_CONFIG_KEY_1: advice.detachedHead
+          GIT_CONFIG_VALUE_1: 'false'
         with:
           ref: ${{ needs.please.outputs.tag }}
           persist-credentials: false
@@ -148,6 +171,13 @@ jobs:
       id-token: write # to publish with npm's trusted publishing and sign the provenance
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # Its `git init` names the branch, and it checks out a detached ref on purpose: no advice.
+        env:
+          GIT_CONFIG_COUNT: '2'
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
+          GIT_CONFIG_KEY_1: advice.detachedHead
+          GIT_CONFIG_VALUE_1: 'false'
         with:
           ref: ${{ needs.please.outputs.tag }}
           persist-credentials: false

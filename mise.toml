@@ -1,6 +1,9 @@
 [tools]
-actionlint = "1.7.12"
+# actionlint by its full backend, as mise's registry now points the short name at a fork.
+"aqua:rhysd/actionlint" = "1.7.12"
 "aqua:taiki-e/cargo-llvm-cov" = "0.9.1"
+# mise builds it with `cargo install` without its own bin on PATH, so cargo warns to add it, and
+# mise adds it once the tool runs. The warning goes when mise's cargo backend fixes that.
 "cargo:cargo-mutants" = "27.1.0"
 cargo-deny = "0.20.2"
 editorconfig-checker = "4.0.2"
@@ -49,7 +52,7 @@ description = "Mutation tests of the limiter and the Stripe client, each file he
 run = "node testing/src/floors/mutants.ts"
 
 [tasks.workflows]
-run = ["actionlint", "zizmor --persona pedantic .github/workflows"]
+run = ["actionlint", "zizmor --offline --persona pedantic .github/workflows"]
 
 [tasks.template]
 description = "The Copier template, rendered public and private, each with the files it should have"
@@ -105,7 +108,7 @@ for repo in public pages private; do
   [ "$repo" = private ] && answer=true
   grep -q "^private: $answer$" "$work/$repo/.copier-answers.yml" || fail "$repo's answers lack private: $answer"
   if [ -d "$work/$repo/.github/workflows" ]; then
-    (cd "$work/$repo" && actionlint .github/workflows/*.yml && zizmor --quiet --persona pedantic .github/workflows)
+    (cd "$work/$repo" && actionlint .github/workflows/*.yml && zizmor --offline --quiet --persona pedantic .github/workflows)
   fi
   # A new repo starts formatted as kit's formatter writes it, so its first check passes.
   oxfmt --check -c rules/oxfmt.json "$work/$repo" > /dev/null || fail "$repo isn't formatted as oxfmt writes it"
@@ -137,7 +140,7 @@ grep -q -E '^  group: ci-[$][{][{] github[.]ref [}][}]$' "$work/public/.github/w
   || fail "ci.yml's concurrency group lost its expression"
 '''
 [tasks.downstream]
-description = "This build of kit under each site's own check, from the repos beside kit: CI checks out the public ones"
+description = "This build of kit under each site's own check, from the repos beside kit"
 run = """
 set -eu
 pack=$(mktemp -d)
