@@ -68,13 +68,16 @@ await test('the preview’s port is a whole number from 1 to 65535, or a failure
   }
 });
 
-await test('the preview’s process ends with its stdin, as when the stack that holds it is killed', async () => {
+/** A preview's process, its stdin ended once it serves: the exit code it ends with. Vite ends a
+ *  preview with its stdin only where CI isn't "true", so each test sets CI one way. */
+const endedWithStdin = async (ci: Readonly<Record<string, string>>): Promise<number | null> => {
   const outDir = mkdtempSync(path.join(tmpdir(), 'kit-preview-'));
   writeFileSync(path.join(outDir, 'index.html'), '<!doctype html><title>Served</title>');
+  const others = Object.entries(process.env).filter(([name]) => name !== 'CI');
   const child = spawn(
     process.execPath,
     [fileURLToPath(new URL('../src/stack/preview-child.ts', import.meta.url)), KIT, outDir],
-    { stdio: ['pipe', 'pipe', 'inherit'] },
+    { stdio: ['pipe', 'pipe', 'inherit'], env: Object.assign(Object.fromEntries(others), ci) },
   );
   try {
     const ready = new Promise<void>((resolve) => {
@@ -89,9 +92,17 @@ await test('the preview’s process ends with its stdin, as when the stack that 
       child.once('exit', resolve);
     });
     child.stdin.end();
-    assert.equal(await exited, 0);
+    return await exited;
   } finally {
     child.kill();
     rmSync(outDir, { recursive: true, force: true });
   }
+};
+
+await test('the preview’s process ends with its stdin, as when the stack that holds it is killed', async () => {
+  assert.equal(await endedWithStdin({}), 0);
+});
+
+await test('the preview’s process ends with its stdin just the same where CI is set', async () => {
+  assert.equal(await endedWithStdin({ CI: 'true' }), 0);
 });
