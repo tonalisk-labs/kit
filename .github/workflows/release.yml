@@ -10,8 +10,9 @@
 #
 # The release PR is opened with a GitHub App's token, since a PR opened with GITHUB_TOKEN starts
 # no workflow and would never be checked. The App's client ID (RELEASE_APP_CLIENT_ID) and key
-# (RELEASE_APP_KEY) live in the calling repo's `release` environment, and the caller passes the key
-# by name: a called workflow sees an environment secret only when its caller passes it.
+# (RELEASE_APP_KEY) live in the calling repo's `release` environment. A caller can't pass that
+# secret, and its own expression for it is empty, but a job here that names the environment uses
+# the environment's value once the caller passes the name, as `please` does.
 name: release
 
 on:
@@ -57,6 +58,15 @@ jobs:
       created: ${{ steps.please.outputs.release_created }}
       tag: ${{ steps.please.outputs.tag_name }}
     steps:
+      # `required: true` checks only that the caller passes the name, never that it has a value.
+      - name: The release App's key has a value
+        env:
+          KEY: ${{ secrets.RELEASE_APP_KEY }}
+        run: |
+          [[ -n "${KEY}" ]] || {
+            echo "::error::RELEASE_APP_KEY is empty: the caller must pass it by name"
+            exit 1
+          }
       - id: token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:

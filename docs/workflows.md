@@ -25,4 +25,5 @@ To set npm up once:
 3. Under publishing access, require two-factor authentication and disallow tokens.
 
 A private repo runs its checks locally, where `mise run downstream` also checks this build in
-each site checked out beside kit.
+each site checked out beside kit. Until the sites are on GitHub, run it on the Mac before merging
+each release-please PR, and attach its log to the PR.
