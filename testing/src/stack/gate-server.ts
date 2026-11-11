@@ -5,7 +5,7 @@ import { once } from 'node:events';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { availableParallelism } from 'node:os';
 
-import { HOLDER_HEADER } from './hold.ts';
+import { described, HOLDER_HEADER } from './hold.ts';
 
 /** The fixed local port the machine's one CPU gate listens on: every run finds it there. */
 export const GATE_PORT = 47_391;
@@ -61,6 +61,14 @@ export const holderOf = (incoming: IncomingMessage): string => {
   }
 };
 
+/** This process's holdings, each named as GET /holders gives it: what, by whom, for how long. */
+export const holdingsNamed = (): string => {
+  const now = Date.now();
+  return holdings.size === 0
+    ? 'it records no holder or waiter'
+    : [...holdings].map((holding) => described(holding, now)).join('; ');
+};
+
 /** Answers a GET /holders with this process's holdings, as JSON. */
 export const answerHolders = (outgoing: ServerResponse): void => {
   outgoing
@@ -95,7 +103,7 @@ export const holdOpen = (outgoing: ServerResponse, { take, give, what, who }: Se
       outgoing.writeHead(200).flushHeaders();
     })
     .catch((error: unknown) => {
-      outgoing.writeHead(503).end(String(error));
+      outgoing.writeHead(503).end(error instanceof Error ? error.message : String(error));
     });
 };
 

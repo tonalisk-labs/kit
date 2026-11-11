@@ -28,6 +28,7 @@ const docker = await standIn(
   `#!/bin/sh
 case "$1" in
   port) echo "127.0.0.1:55001" ;;
+  inspect) echo '{"bridge":{"Gateway":"172.17.0.1","IPAddress":"172.17.0.2"}}' ;;
   ps) case " $* " in *" --no-trunc "*) id=abc0123456789def ;; *) id=abc012345678 ;; esac
       printf '%s host 7 Wed Oct 28 09:00:00 2026\\nbare \\n' "$id" ;;
   logs) if [ "$2" = --follow ]; then exec sleep 600; fi; printf 'starting\\ninit complete\\n' ;;
@@ -94,7 +95,7 @@ const apple = await standIn(
   `#!/bin/sh
 case "$1" in
   create) printf '%s\\n' "$@" > '${created}'; echo 'Fetching postgres'; echo 'abc-123' ;;
-  inspect) echo '[{"configuration":{"id":"abc-123","publishedPorts":[{"hostAddress":"127.0.0.1","hostPort":55002,"containerPort":5432,"proto":"tcp","count":1}]},"status":{"state":"running"}}]' ;;
+  inspect) echo '[{"configuration":{"id":"abc-123","publishedPorts":[{"hostAddress":"127.0.0.1","hostPort":55002,"containerPort":5432,"proto":"tcp","count":1}]},"status":{"state":"running","networks":[{"ipv4Address":"192.168.64.7/24","ipv4Gateway":"192.168.64.1","network":"default"}]}}]' ;;
   list) echo '[{"configuration":{"id":"ours","labels":{"run":"host 7 then"}}},{"configuration":{"id":"theirs","labels":{}}}]' ;;
   *) exit 0 ;;
 esac
@@ -108,6 +109,7 @@ const SHORT: Readonly<Record<Verb, number>> = {
   start: 200,
   logs: 200,
   address: 200,
+  network: 200,
   exec: 200,
   stop: 200,
   remove: 200,
@@ -275,6 +277,21 @@ await test('a container’s address is the loopback port its configuration recor
     await runtime.addresses('abc-123', [5432]),
     new Map([[5432, { host: '127.0.0.1', port: 55_002 }]]),
   );
+});
+
+await test('a container’s network is its own address, without its prefix, and its gateway, the host’s there', async () => {
+  const runtime = appleContainerOf({ command: apple, limits: SHORT, expiry: never });
+  assert.deepEqual(await runtime.network('abc-123'), {
+    own: '192.168.64.7',
+    host: '192.168.64.1',
+  });
+});
+
+await test('Docker’s network on Linux is its bridge’s address and gateway; on macOS, whose gateway is in Docker’s machine, refused', async () => {
+  const linux = dockerOf({ command: docker, limits: SHORT, expiry: never, platform: 'linux' });
+  assert.deepEqual(await linux.network('abc'), { own: '172.17.0.2', host: '172.17.0.1' });
+  const mac = dockerOf({ command: docker, limits: SHORT, expiry: never, platform: 'darwin' });
+  await assert.rejects(mac.network('abc'), { message: /run with Apple's container/u });
 });
 
 await test('only the containers that carry a label are listed with it', async () => {

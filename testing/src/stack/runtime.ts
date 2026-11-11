@@ -38,6 +38,13 @@ export interface Address {
   readonly port: number;
 }
 
+/** Where a running container is on its network, and where the host is there: the one address a
+ *  host server for the container answers, and the address it listens on. */
+export interface Network {
+  readonly own: string;
+  readonly host: string;
+}
+
 /** How long each call may take on a busy machine, in milliseconds: a create may pull its image,
  *  and a container may take minutes to say it's ready. A hung daemon answers no call at all. */
 export const LIMITS = {
@@ -46,6 +53,7 @@ export const LIMITS = {
   start: 120_000,
   logs: 300_000,
   address: 30_000,
+  network: 30_000,
   exec: 600_000,
   stop: 120_000,
   remove: 120_000,
@@ -70,6 +78,7 @@ export interface Runtime {
     id: string,
     ports: readonly number[],
   ) => Promise<ReadonlyMap<number, Address>>;
+  readonly network: (id: string) => Promise<Network>;
   readonly exec: (id: string, command: readonly string[], signal: AbortSignal) => Promise<string>;
   /** The command line of an exec whose standard input its caller holds. */
   readonly execLine: (id: string, command: readonly string[]) => readonly [string, ...string[]];

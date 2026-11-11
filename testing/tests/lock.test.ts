@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { HOST_ENV, holdBrowserSeat } from '../src/stack/control.ts';
 import { answerHolders, holderOf } from '../src/stack/gate-server.ts';
 import { openHold } from '../src/stack/hold.ts';
-import { seatPool, stackLocks } from '../src/stack/lock.ts';
+import { type Clock, seatPool, stackLocks } from '../src/stack/lock.ts';
 
 const flush = async (): Promise<void> =>
   new Promise((resolve) => {
@@ -87,9 +87,14 @@ await test('many waiting sharers are all let in at once, by the one give', async
   await Promise.all(turns);
 });
 
-/** A pool of `size` seats served as the stack host serves its browsers' seats, for `work`. */
-const withPool = async (size: number, work: () => Promise<void>): Promise<void> => {
-  const pooled = seatPool(size);
+/** A pool of `size` seats served as the stack host serves its browsers' seats, for `work`; its
+ *  stall bound and clock, where given. */
+const withPool = async (
+  size: number,
+  work: () => Promise<void>,
+  bound: { readonly stall?: number; readonly clock?: Clock } = {},
+): Promise<void> => {
+  const pooled = seatPool(size, bound);
   const server = createServer((incoming, outgoing) => {
     incoming.resume();
     if (incoming.url === '/holders') {
@@ -150,3 +155,55 @@ await test('a seat wait given up says who holds the seats, by the names they gav
       idle();
     }
   }));
+
+/** A clock that moves only when told, ringing each alarm it passes. */
+const manualClock = (): { readonly clock: Clock; readonly advance: (ms: number) => void } => {
+  const state = { now: 0, alarms: new Set<{ readonly at: number; readonly ring: () => void }>() };
+  return {
+    clock: {
+      now: () => state.now,
+      after: (ms, ring) => {
+        const alarm = { at: state.now + ms, ring };
+        state.alarms.add(alarm);
+        return () => {
+          state.alarms.delete(alarm);
+        };
+      },
+    },
+    advance: (ms) => {
+      state.now += ms;
+      for (const alarm of [...state.alarms].filter(({ at }) => at <= state.now)) {
+        state.alarms.delete(alarm);
+        alarm.ring();
+      }
+    },
+  };
+};
+
+await test('a seat wait outlives its bound while seats change hands, and fails once they stand still, naming who holds them', async () => {
+  const { clock, advance } = manualClock();
+  await withPool(
+    1,
+    async () => {
+      const url = new URL('/browser/1', process.env[HOST_ENV]);
+      const ask = async (who: string): Promise<() => void> =>
+        openHold(url, { held: 'a seat', refused: () => 'the seat was refused' }, { who });
+      const first = await ask('visual-01 › J1 (worker 1, pid 11)');
+      const second = ask('webkit-09 › J5 (worker 2, pid 12)');
+      const third = ask('visual-13 › J8 (worker 3, pid 13)');
+      await flush();
+      advance(900);
+      first();
+      const held = await second;
+      advance(200);
+      await flush();
+      advance(1000);
+      await assert.rejects(third, {
+        message:
+          /^the seat was refused: no seat changed hands in 1 s: .*1 of the Linux browsers' 1 seats held by webkit-09 › J5 \(worker 2, pid 12\)/u,
+      });
+      held();
+    },
+    { stall: 1000, clock },
+  );
+});

@@ -153,7 +153,7 @@ await test("WebKit in the Linux image and its server's requests trust the local 
     await rm(folder, { recursive: true, force: true });
     throw error;
   });
-  const browser = await webkit.connect(server.wsEndpoint, { exposeNetwork: '<loopback>' });
+  const browser = await webkit.connect(server.endpoints.webkit);
   try {
     const { ignoreHTTPSErrors } = browserTrust(trusted.trust, 'webkit', true);
     assert.equal(ignoreHTTPSErrors, false);

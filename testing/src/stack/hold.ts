@@ -17,7 +17,7 @@ export interface HoldKind {
 }
 
 /** One holding a server lists: what, by whom, since when, held or waited for. */
-const described = (entry: unknown, now: number): string => {
+export const described = (entry: unknown, now: number): string => {
   if (!isObject(entry)) {
     return String(entry);
   }
@@ -86,14 +86,23 @@ export const openHold = async (
   const waiting: { failing?: Promise<void> } = {};
   const call = request(url, { method: 'POST', signal, headers }, (response) => {
     const { statusCode: status } = response;
-    // Read: a refusal to its end, so its socket is freed, as one left unread holds the process open;
-    // a grant, so that its server ending it whole is heard.
-    response.resume();
+    // Read: a grant, so that its server ending it whole is heard; a refusal to its end, so its
+    // socket is freed, as one left unread holds the process open, and what it says is told.
     if (status === 200) {
+      response.resume();
       resolve(releaseOf(call, response, kind));
-    } else {
-      reject(refusal(kind.refused(status), status));
+      return;
     }
+    const said: Buffer[] = [];
+    response
+      .on('data', (chunk: Buffer) => {
+        said.push(chunk);
+      })
+      .once('close', () => {
+        const reason = Buffer.concat(said).toString('utf8').trim();
+        const message = kind.refused(status);
+        reject(refusal(reason === '' ? message : `${message}: ${reason}`, status));
+      });
   });
   call.on('error', (error) => {
     if (signal === undefined || !signal.aborted) {

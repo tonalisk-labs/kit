@@ -1,3 +1,4 @@
+import { isObject } from '../unknown.ts';
 import {
   type Address,
   type Caller,
@@ -5,6 +6,7 @@ import {
   type ContainerSpec,
   type Expiry,
   type Limits,
+  type Network,
   pairsOf,
   type Runtime,
   sharedMemoryOf,
@@ -16,6 +18,7 @@ const VERBS = {
   start: 'start',
   logs: 'logs',
   address: 'port',
+  network: 'inspect',
   exec: 'exec',
   stop: 'stop',
   remove: 'rm',
@@ -57,6 +60,24 @@ const labelledIn = (listing: string): Map<string, string> =>
 
 type Call = Caller['call'];
 
+/** A container's address and its network's gateway, as `docker inspect` gives its networks in
+ *  JSON. On Linux the gateway is the host's own bridge; Docker Desktop's is in its virtual
+ *  machine, so a host server there would be out of the container's reach. */
+const networkIn = (id: string, answer: string, platform: NodeJS.Platform): Network => {
+  if (platform === 'darwin') {
+    throw new Error(
+      "Docker on macOS runs its containers in a virtual machine whose gateway isn't this Mac, so the Linux image's browsers can't reach its servers: run with Apple's container, unset KIT_CONTAINER_RUNTIME",
+    );
+  }
+  const parsed: unknown = JSON.parse(answer);
+  const [attached] = isObject(parsed) ? Object.values(parsed) : [];
+  const [own, host] = isObject(attached) ? [attached['IPAddress'], attached['Gateway']] : [];
+  if (typeof own !== 'string' || typeof host !== 'string' || own === '' || host === '') {
+    throw new TypeError(`docker inspect ${id} answered no network: ${answer}`);
+  }
+  return { own, host };
+};
+
 /** Files go in by `docker cp`, which reads on the host side, so no host directory is shared with
  *  Docker. */
 const lifecycleOf = (call: Call): Pick<Runtime, 'create' | 'start' | 'stop'> => ({
@@ -79,7 +100,16 @@ const lifecycleOf = (call: Call): Pick<Runtime, 'create' | 'start' | 'stop'> => 
   },
 });
 
-const lookupsOf = (call: Call): Pick<Runtime, 'addresses' | 'labelled'> => ({
+const lookupsOf = (
+  call: Call,
+  platform: NodeJS.Platform,
+): Pick<Runtime, 'addresses' | 'labelled' | 'network'> => ({
+  network: async (id) =>
+    networkIn(
+      id,
+      await call('network', ['--format', '{{json .NetworkSettings.Networks}}', id]),
+      platform,
+    ),
   addresses: async (id, ports) =>
     new Map(
       await Promise.all(
@@ -108,7 +138,13 @@ export const dockerOf = ({
   command = 'docker',
   limits,
   expiry,
-}: { command?: string; limits?: Limits; expiry?: Expiry } = {}): Runtime & Caller => {
+  platform = process.platform,
+}: {
+  command?: string;
+  limits?: Limits;
+  expiry?: Expiry;
+  platform?: NodeJS.Platform;
+} = {}): Runtime & Caller => {
   const caller = callerOf({
     command,
     verbs: VERBS,
@@ -117,5 +153,5 @@ export const dockerOf = ({
     limits,
     expiry,
   });
-  return Object.assign(caller, lifecycleOf(caller.call), lookupsOf(caller.call));
+  return Object.assign(caller, lifecycleOf(caller.call), lookupsOf(caller.call, platform));
 };

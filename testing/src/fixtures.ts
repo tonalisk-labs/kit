@@ -21,7 +21,7 @@ import { CPU_SLOWDOWN } from './network.ts';
 import { type Meter, type Reconnect, startMeter } from './perf/measure.ts';
 import { FAILURE_ATTACHMENT } from './perf/steps.ts';
 import { installVitals } from './perf/vitals.ts';
-import { deviceBudget } from './stack/browsers.ts';
+import { deviceBudget, endpointOf } from './stack/browsers.ts';
 import {
   holdBrowserSeat,
   holdStack,
@@ -43,7 +43,8 @@ export interface Options {
   /** A visual project's: Chromium in the Linux image, holding screens to their baselines. */
   readonly visual: boolean;
   /** The most browser contexts one of the worker's tests has open at once, its own included: a
-   *  seat each in the Linux image, which a test of several devices declares with `test.use`. */
+   *  seat each in the Linux image while the test runs, which a test of several devices declares
+   *  with `test.use`. */
   readonly browserContexts: number;
 }
 
@@ -56,8 +57,6 @@ const API = '@api';
 interface StackWorkerFixtures {
   /** The target's running stack, from its setup project. */
   readonly stack: Coordinates;
-  /** Whether the worker's browser holds a seat in the Linux image (stack/browsers.ts). */
-  readonly browserSeat: boolean;
 }
 
 interface StackFixtures {
@@ -76,6 +75,11 @@ export interface Devices {
 }
 
 interface TestFixtures {
+  /** Whether the test holds seats in the Linux image (stack/browsers.ts), one per context it may
+   *  have open. */
+  readonly browserSeat: boolean;
+  /** The test's CPU turn, held for its own work. */
+  readonly cpuTurn: boolean;
   readonly invariants: Watch;
   readonly devices: Devices;
   /** Live sockets' channels by path, for a metered page's frame counts. */
@@ -127,23 +131,6 @@ export const apiTest: TestType<
   browserContexts: [1, { option: true, scope: 'worker' }],
   row: [undefined, { option: true, scope: 'worker' }],
   visual: [false, { option: true, scope: 'worker' }],
-  /** Taken before any stack hold, so a worker waiting for a seat holds nothing another waits on. */
-  browserSeat: [
-    async ({ browserName, browserContexts, visual }, provide): Promise<void> => {
-      if (!servedByImage(browserName, visual) || process.env[HOST_ENV] === undefined) {
-        await provide(false);
-        return;
-      }
-      const release = await holdBrowserSeat(browserContexts);
-      try {
-        await provide(true);
-      } finally {
-        release();
-      }
-    },
-    // Unbounded, as each seat's holder is a worker whose tests run under their own timeouts.
-    { scope: 'worker', timeout: 0 },
-  ],
   stack: [
     async ({ site }, provide): Promise<void> => {
       const handoff = process.env[STACK_ENV];
@@ -158,7 +145,7 @@ export const apiTest: TestType<
     { scope: 'worker' },
   ],
   stackHold: [
-    async ({ site, browserSeat: _seated }, provide, testInfo): Promise<void> => {
+    async ({ site }, provide, testInfo): Promise<void> => {
       const owns = testInfo.tags.includes(EXCLUSIVE);
       if (site === '' || process.env[HOST_ENV] === undefined) {
         await provide(owns);
@@ -202,22 +189,21 @@ export const test: TestType<
    * container the stack host starts; baselines match only the architecture that drew them.
    */
   connectOptions: [
-    async ({ browserName, visual, browserSeat: _seated }, provide): Promise<void> => {
+    async ({ browserName, visual }, provide): Promise<void> => {
       if (visual && arch() !== BASELINE_ARCH) {
         throw new Error(
           `The baselines were drawn on ${BASELINE_ARCH} and this machine is ${arch()}: its Linux image renders differently, so the visual projects run on ${BASELINE_ARCH} alone`,
         );
       }
       const remote = visual || browserName === 'webkit';
-      const wsEndpoint = remote ? process.env[LINUX_ENV] : undefined;
+      const wsEndpoint = remote ? endpointOf(browserName, process.env[LINUX_ENV]) : undefined;
       if (remote && (visual || platform() === 'darwin') && wsEndpoint === undefined) {
         throw new Error(
           'WebKit on macOS and the visual projects run only in the Linux image: its setup project starts it',
         );
       }
-      await provide(
-        wsEndpoint === undefined ? undefined : { wsEndpoint, exposeNetwork: '<loopback>' },
-      );
+      // The image's browser reaches the host's loopback through the host's proxy (stack/socks.ts).
+      await provide(wsEndpoint === undefined ? undefined : { wsEndpoint });
     },
     { scope: 'worker' },
   ],
@@ -238,8 +224,8 @@ export const test: TestType<
   baseURL: async ({ stack }, provide): Promise<void> => {
     await provide(stack.baseURL);
   },
-  /** The test's context, used once its stack hold and CPU turn are held; named to the edge. */
-  context: async ({ stackHold: _held, context, row, stack }, provide, testInfo): Promise<void> => {
+  /** The test's context, made once its stack hold, seats and CPU turn are held; named to the edge. */
+  context: async ({ cpuTurn: _turn, context, row, stack }, provide, testInfo): Promise<void> => {
     if (testInfo.tags.includes(API)) {
       throw new Error(`an ${API} test makes no page: it is written with apiTest`);
     }
@@ -290,16 +276,37 @@ export const test: TestType<
   channels: [{}, { option: true }],
   reconnect: [undefined, { option: true }],
   keyboardOnly: [false, { option: true }],
-  /** A CPU turn, taken after the stack hold as every turn is, spans the test's own work; the
-   *  override keeps the hold's own timeout, so none of the wait is charged to the test's. */
-  stackHold: async ({ stackHold }, provide): Promise<void> => {
-    const release = await holdTestTurn();
-    try {
-      await provide(stackHold);
-    } finally {
-      release();
-    }
-  },
+  /** Taken after the stack hold, so every holder is a test with its stack, and before the CPU
+   *  turn, which a holder may wait on: a test waiting for seats holds no turn. The wait is not the
+   *  test's, and fails should the seats stand still (stack/lock.ts). */
+  browserSeat: [
+    async ({ stackHold: _held, browserName, browserContexts, visual }, provide): Promise<void> => {
+      if (!servedByImage(browserName, visual) || process.env[HOST_ENV] === undefined) {
+        await provide(false);
+        return;
+      }
+      const release = await holdBrowserSeat(browserContexts);
+      try {
+        await provide(true);
+      } finally {
+        release();
+      }
+    },
+    { timeout: 0 },
+  ],
+  /** A CPU turn, taken last as every turn is, spans the test's own work; its wait is not the
+   *  test's. */
+  cpuTurn: [
+    async ({ browserSeat: _seated }, provide): Promise<void> => {
+      const release = await holdTestTurn();
+      try {
+        await provide(true);
+      } finally {
+        release();
+      }
+    },
+    { auto: true, timeout: 0 },
+  ],
   meter: [
     async ({ page, stack, channels, reconnect }, provide): Promise<void> => {
       const options = { apiPrefix: stack.apiPrefix, channels, vitals: false, reconnect };

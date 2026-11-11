@@ -21,7 +21,8 @@ export const STACK_ENV = 'KIT_STACK';
  *  a keychain prompt, and the visual projects' Chromium, so screenshots match on every machine. */
 export const LINUX_BROWSERS = 'linux-browsers';
 
-/** The variable WebKit rows and the visual projects read that server's endpoint from. */
+/** The variable WebKit rows and the visual projects read that server's endpoints from, by engine,
+ *  in JSON. */
 export const LINUX_ENV = 'KIT_LINUX_BROWSERS';
 
 export type Action = 'start' | 'stop' | 'restart';
@@ -95,8 +96,8 @@ export const holdStack = async (hold: 'share' | 'own', key: string): Promise<() 
     { who: holderName() },
   );
 
-/** A seat among the Linux image's browsers for each context the worker's tests have open at once,
- *  all taken together and held as a stack hold is, for the worker's life. */
+/** A seat among the Linux image's browsers for each context the test may have open at once, all
+ *  taken together and held as a stack hold is, for the test's life. */
 export const holdBrowserSeat = async (contexts: number): Promise<() => void> =>
   openHold(
     new URL(

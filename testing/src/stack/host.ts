@@ -32,7 +32,7 @@ interface Entry {
 const startKey = async (key: string, turns: string, signal: AbortSignal): Promise<Started> => {
   if (key === LINUX_BROWSERS) {
     const server = await startBrowserServer(signal);
-    return { env: { [LINUX_ENV]: server.wsEndpoint }, stop: server.stop };
+    return { env: { [LINUX_ENV]: JSON.stringify(server.endpoints) }, stop: server.stop };
   }
   const target = discover().find(({ name }) => name === key);
   if (target === undefined) {

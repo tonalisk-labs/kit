@@ -1,5 +1,6 @@
-// A full pool of browser contexts in the Linux image, one per seat, loading one page at once
-// through the edge on 3G: each loads, none stalled.
+// A full pool of browser contexts in the Linux image, one per seat, shared by its two browsers and
+// loading one page at once through the edge on 3G, each through the host's proxy: each loads, none
+// stalled.
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -8,7 +9,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
-import { type Browser, webkit } from '@playwright/test';
+import { type Browser, chromium, webkit } from '@playwright/test';
 
 import { joinEdge } from '../src/edge-client.ts';
 import { BROWSER_SEATS, startBrowserServer } from '../src/stack/browsers.ts';
@@ -39,13 +40,19 @@ const startSite = async (): Promise<{ port: number; close: () => void }> => {
   };
 };
 
-/** How many scripts each of `CONTEXTS` contexts ran, all loading `origin` at once on 3G. */
-const loadedAtOnce = async (browser: Browser, origin: string): Promise<number[]> => {
-  const { ignoreHTTPSErrors } = browserTrust({ ca: '', spki: '' }, 'webkit', true);
+/** How many scripts each of `CONTEXTS` contexts ran, taken from `browsers` in turn, all loading
+ *  `origin` at once on 3G. */
+const loadedAtOnce = async (browsers: readonly Browser[], origin: string): Promise<number[]> => {
   const contexts = await Promise.all(
-    Array.from({ length: CONTEXTS }, async () =>
-      browser.newContext({ baseURL: origin, ignoreHTTPSErrors }),
-    ),
+    Array.from({ length: CONTEXTS }, async (_none, at) => {
+      const browser = browsers[at % browsers.length];
+      if (browser === undefined) {
+        throw new RangeError('no browser to open a context in');
+      }
+      const engine = browser.browserType().name();
+      const { ignoreHTTPSErrors } = browserTrust({ ca: '', spki: '' }, engine, true);
+      return browser.newContext({ baseURL: origin, ignoreHTTPSErrors });
+    }),
   );
   await Promise.all(contexts.map(async (context) => joinEdge(context, origin, '3g')));
   const pages = await Promise.all(contexts.map(async (context) => context.newPage()));
@@ -57,7 +64,7 @@ const loadedAtOnce = async (browser: Browser, origin: string): Promise<number[]>
   return loaded.map(Number);
 };
 
-await test(`${String(CONTEXTS)} contexts in the Linux image load a page at once, none stalled`, async () => {
+await test(`${String(CONTEXTS)} contexts in the Linux image's two browsers load a page at once through the host's proxy, none stalled`, async () => {
   const { signal } = new AbortController();
   const folder = await mkdtemp(path.join(tmpdir(), 'contexts-test-'));
   const caDir = path.join(folder, 'edge-ca');
@@ -72,14 +79,17 @@ await test(`${String(CONTEXTS)} contexts in the Linux image load a page at once,
     startBrowserServer(signal, caDir),
     startEdge(upstreams, signal, { localCa: caDir }),
   ]);
-  const browser = await webkit.connect(server.wsEndpoint, { exposeNetwork: '<loopback>' });
+  const browsers = await Promise.all([
+    webkit.connect(server.endpoints.webkit),
+    chromium.connect(server.endpoints.chromium),
+  ]);
   try {
     assert.deepEqual(
-      await loadedAtOnce(browser, edge.origin),
+      await loadedAtOnce(browsers, edge.origin),
       Array.from({ length: CONTEXTS }, () => SCRIPTS.length),
     );
   } finally {
-    await browser.close();
+    await Promise.all(browsers.map(async (browser) => browser.close()));
     await Promise.all([server.stop(), edge.stop()]);
     site.close();
     await rm(folder, { recursive: true, force: true });

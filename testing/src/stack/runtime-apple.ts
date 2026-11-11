@@ -9,6 +9,7 @@ import {
   type Expiry,
   type Limits,
   LIMITS,
+  type Network,
   onTheClock,
   pairsOf,
   type Runtime,
@@ -22,6 +23,7 @@ const VERBS = {
   start: 'start',
   logs: 'logs',
   address: 'inspect',
+  network: 'inspect',
   exec: 'exec',
   stop: 'stop',
   remove: 'delete',
@@ -92,6 +94,18 @@ const publishedIn = (id: string, answer: string): Map<number, Address> => {
         : [];
     }),
   );
+};
+
+/** A container's address and its network's gateway, the host's address there, as an inspect
+ *  records them: the address with its prefix length, which goes. */
+const networkIn = (id: string, answer: string): Network => {
+  const networks = field(field(snapshotsIn('inspect', answer)[0], 'status'), 'networks');
+  const attached: unknown = Array.isArray(networks) ? networks.at(0) : undefined;
+  const [own, host] = [field(attached, 'ipv4Address'), field(attached, 'ipv4Gateway')];
+  if (typeof own !== 'string' || typeof host !== 'string') {
+    throw new TypeError(`container inspect ${id} answered no network: ${answer}`);
+  }
+  return { own: own.replace(/\/\d+$/u, ''), host };
 };
 
 /** The ids a `list` answers. */
@@ -190,8 +204,9 @@ const lifecycleOf = (call: Call, ports: Held): Pick<Runtime, 'create' | 'start' 
   },
 });
 
-const lookupsOf = (call: Call): Pick<Runtime, 'addresses' | 'labelled'> => ({
+const lookupsOf = (call: Call): Pick<Runtime, 'addresses' | 'labelled' | 'network'> => ({
   addresses: async (id) => publishedIn(id, await call('address', [id])),
+  network: async (id) => networkIn(id, await call('network', [id])),
   labelled: async (key) => labelledIn(await call('list', ['--all', '--format', 'json']), key),
 });
 

@@ -3,7 +3,7 @@ import type { Service } from './process.ts';
 import { isGone, RUN } from './run.ts';
 import { appleContainerOf } from './runtime-apple.ts';
 import { dockerOf } from './runtime-docker.ts';
-import type { Address, ContainerSpec, Runtime } from './runtime.ts';
+import type { Address, ContainerSpec, Network, Runtime } from './runtime.ts';
 
 export interface Container extends Service {
   readonly id: string;
@@ -83,7 +83,13 @@ const addressIn =
     return found;
   };
 
-export const container = async (spec: ContainerSpec, signal: AbortSignal): Promise<Container> => {
+/** A container started from `spec` once it says it's ready; `started` runs as it starts, before
+ *  that, for a service that waits on something the host gives it. */
+export const container = async (
+  spec: ContainerSpec,
+  signal: AbortSignal,
+  started?: (id: string) => Promise<void>,
+): Promise<Container> => {
   signal.throwIfAborted();
   await sweptOnce();
   const { id, forget } = await created(spec);
@@ -92,6 +98,9 @@ export const container = async (spec: ContainerSpec, signal: AbortSignal): Promi
     forget();
   };
   try {
+    if (started !== undefined) {
+      await started(id);
+    }
     const texts = spec.readyInAnyOrder === true ? spec.ready.map((text) => [text]) : [spec.ready];
     await Promise.all(
       texts.map(async (text) => RUNTIME.ready(id, { texts: text, logFile: spec.logFile }, signal)),
@@ -103,6 +112,9 @@ export const container = async (spec: ContainerSpec, signal: AbortSignal): Promi
     throw error;
   }
 };
+
+/** A running container's address on its network, and the host's there. */
+export const networkOf = async (id: string): Promise<Network> => RUNTIME.network(id);
 
 export const exec = async (
   id: string,
