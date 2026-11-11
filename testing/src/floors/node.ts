@@ -5,7 +5,7 @@
 import { finished, pipeline } from 'node:stream/promises';
 import { run, type RunOptions } from 'node:test';
 import { spec as SpecReporter } from 'node:test/reporters';
-import { inspect, parseArgs } from 'node:util';
+import { parseArgs } from 'node:util';
 
 import { holdFloors, type Measured } from './hold.ts';
 import { measuredOnce } from './instances.ts';
@@ -35,30 +35,12 @@ const runOptions = (
   files,
 });
 
-/** Diagnostic for kit PR #1, removed before it merges: each test's start and end as it happens. */
-const stamp = (): string => new Date().toISOString();
-
 /** Runs `files` plainly, shown as `node --test` shows them; true when none failed. */
 const passes = async (files: string[], together: boolean): Promise<boolean> => {
   let failed = false;
-  const options = Object.assign(runOptions(files, { coverage: false, together }), {
-    timeout: 600_000,
+  const tests = run(runOptions(files, { coverage: false, together })).on('test:fail', () => {
+    failed = true;
   });
-  const tests = run(options)
-    .on('test:fail', () => {
-      failed = true;
-    })
-    .on('test:dequeue', ({ name, nesting, file }) => {
-      console.error(`${stamp()} start ${String(nesting)} ${String(file)} ${name}`);
-    })
-    .on('test:complete', ({ name, nesting, file, details }) => {
-      const error = details.error === undefined ? '' : inspect(details.error, { depth: 4 });
-      const verdict = details.passed ? 'pass' : `FAIL ${error.slice(0, 600)}`;
-      const took = `${String(Math.round(details.duration_ms))} ms`;
-      console.error(
-        `${stamp()} end ${String(nesting)} ${String(file)} ${name}: ${took}, ${verdict}`,
-      );
-    });
   await pipeline(tests, new SpecReporter(), process.stdout, { end: false });
   return !failed;
 };
