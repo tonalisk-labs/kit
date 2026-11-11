@@ -22,7 +22,7 @@ jobs:
       contents: read # to check out the code
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        # Its `git init` names the branch, and a check sits on a detached ref by design: no advice.
+        # Its `git init` names the branch, and the ref it checks out is detached on purpose: no advice.
         env:
           GIT_CONFIG_COUNT: '2'
           GIT_CONFIG_KEY_0: init.defaultBranch
