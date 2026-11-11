@@ -88,21 +88,30 @@ const PROXY_PIPE = '/tmp/proxy';
 
 /** Launches each engine's browser behind the host's proxy, serving it to every worker. A browser
  *  that crashes fails the tests it was serving, as one per worker did, and is launched again at
- *  the same address for the workers that follow. */
+ *  the same address for the workers that follow. On the container's stop, Playwright closes each
+ *  browser and keeps the process; it exits once both are closed, launching none again. */
 const SERVE = `
 const playwright = require('/playwright-core');
+const engines = ${JSON.stringify(Object.entries(PORTS))};
 const proxy = { server: process.env.PROXY };
+const state = { stopping: false, open: engines.length };
+process.once('SIGTERM', () => { state.stopping = true; });
 const failed = (error) => { console.error(error); process.exit(1); };
 const serve = async ([engine, port]) => {
   const server = await playwright[engine].launchServer({ port, host: '0.0.0.0', wsPath: '/' + engine, proxy });
   server.once('close', () => {
+    if (state.stopping) {
+      state.open -= 1;
+      if (state.open === 0) process.exit(0);
+      return;
+    }
     console.log(engine + ' closed, launched again');
     serve([engine, port]).catch(failed);
   });
   console.log(engine + ' serves ' + server.wsEndpoint());
 };
 (async () => {
-  for (const entry of ${JSON.stringify(Object.entries(PORTS))}) await serve(entry);
+  for (const entry of engines) await serve(entry);
 })().catch(failed);
 `;
 
