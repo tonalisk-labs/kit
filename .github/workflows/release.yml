@@ -99,6 +99,9 @@ jobs:
           GIT_CONFIG_VALUE_1: 'false'
         with:
           ref: ${{ needs.please.outputs.tag }}
+          # The whole history: a sitemap dates each page by its sources' last commit, and a shallow
+          # clone gives every page the one commit it holds.
+          fetch-depth: 0
           persist-credentials: false
       # One mise release on every runner, its latest, so each job runs the same task runner. Nothing
       # cached: what the release attests comes from the tagged commit and its lockfiles alone.
