@@ -33,7 +33,8 @@ jobs:
       TIER: ${{ inputs.tier }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        # Its `git init` names the branch, and it checks out a detached ref on purpose: no advice.
+        # Its `git init` names the branch, and a pull request's merge ref or a release's tag is
+        # detached on purpose: no advice.
         env:
           GIT_CONFIG_COUNT: '2'
           GIT_CONFIG_KEY_0: init.defaultBranch
@@ -50,7 +51,7 @@ jobs:
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - run: npm ci
       # Playwright's browsers and their Ubuntu packages come from a cache keyed on the runner image
-      # and Playwright's version, so a run needs neither Ubuntu's mirrors nor Playwright's CDN.
+      # and Playwright's version: a run that finds it needs neither Ubuntu's mirrors nor the CDN.
       - id: playwright
         if: hashFiles('node_modules/@playwright/test/package.json') != ''
         run: |
@@ -126,7 +127,8 @@ jobs:
       contents: read # to check out the code
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        # Its `git init` names the branch, and it checks out a detached ref on purpose: no advice.
+        # Its `git init` names the branch, and a pull request's merge ref or a release's tag is
+        # detached on purpose: no advice.
         env:
           GIT_CONFIG_COUNT: '2'
           GIT_CONFIG_KEY_0: init.defaultBranch
