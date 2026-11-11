@@ -64,7 +64,8 @@ jobs:
           KEY: ${{ secrets.RELEASE_APP_KEY }}
         run: |
           [[ -n "${KEY}" ]] || {
-            echo "::error::RELEASE_APP_KEY is empty: the caller must pass it by name"
+            echo "::error::RELEASE_APP_KEY is empty:" \
+              "set it in this repository's release environment"
             exit 1
           }
       - id: token
