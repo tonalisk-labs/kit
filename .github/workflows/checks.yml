@@ -76,14 +76,6 @@ jobs:
           sudo find /var/lib/apt/lists -maxdepth 1 -type f ! -name lock \
             -exec cp -t "$store/lists" {} +
           sudo chown -R "$USER" "$store"
-          npx playwright install
-      - if: steps.playwright.outputs.key != '' && steps.playwright-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ~/.cache/ms-playwright
-            ~/.cache/playwright-apt
-          key: ${{ steps.playwright.outputs.key }}
       # apt installs from the kept packages alone, with the lists they came from.
       - if: steps.playwright.outputs.key != ''
         run: |
@@ -95,6 +87,15 @@ jobs:
               --no-download < "$store/packages"
           fi
           npx playwright install
+      # Saved after the install, whose browser download finds their packages in: before them, it
+      # warns that the host lacks them.
+      - if: steps.playwright.outputs.key != '' && steps.playwright-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/playwright-apt
+          key: ${{ steps.playwright.outputs.key }}
       - run: mise run check
 
   title:
