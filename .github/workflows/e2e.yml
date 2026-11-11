@@ -50,16 +50,6 @@ jobs:
       - if: hashFiles('Cargo.lock') != ''
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - run: npm ci
-      # The runner's apt reads a mirror list that puts azure.archive.ubuntu.com first, which runners
-      # could not resolve from 9 November 2026; apt goes to Ubuntu's own archives instead.
-      - run: |
-          awk -v RS= -v ORS='\n\n' '{
-            host = "archive"
-            n = split($0, line, "\n")
-            for (i = 1; i <= n; i++) if (line[i] ~ /^Suites:.*-security/) host = "security"
-            sub("mirror\\+file:/etc/apt/apt-mirrors.txt", "https://" host ".ubuntu.com/ubuntu/")
-          } 1' /etc/apt/sources.list.d/ubuntu.sources > "$RUNNER_TEMP/ubuntu.sources"
-          sudo cp "$RUNNER_TEMP/ubuntu.sources" /etc/apt/sources.list.d/ubuntu.sources
       # Playwright's browsers and their Ubuntu packages come from a cache keyed on the runner image
       # and Playwright's version: a run that finds it needs neither Ubuntu's mirrors nor the CDN.
       - id: playwright

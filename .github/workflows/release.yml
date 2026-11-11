@@ -109,16 +109,6 @@ jobs:
           cache: false
       - if: hashFiles('package-lock.json') != ''
         run: npm ci
-      # The runner's apt reads a mirror list that puts azure.archive.ubuntu.com first, which runners
-      # could not resolve from 9 November 2026; apt goes to Ubuntu's own archives instead.
-      - run: |
-          awk -v RS= -v ORS='\n\n' '{
-            host = "archive"
-            n = split($0, line, "\n")
-            for (i = 1; i <= n; i++) if (line[i] ~ /^Suites:.*-security/) host = "security"
-            sub("mirror\\+file:/etc/apt/apt-mirrors.txt", "https://" host ".ubuntu.com/ubuntu/")
-          } 1' /etc/apt/sources.list.d/ubuntu.sources > "$RUNNER_TEMP/ubuntu.sources"
-          sudo cp "$RUNNER_TEMP/ubuntu.sources" /etc/apt/sources.list.d/ubuntu.sources
       # The release check's tests may drive Playwright's browsers, which the runner doesn't carry.
       - if: hashFiles('node_modules/@playwright/test/package.json') != ''
         run: npx playwright install --with-deps
