@@ -1,0 +1,3 @@
+# release-please writes these on each release, in its own style.
+.release-please-manifest.json
+CHANGELOG.md
