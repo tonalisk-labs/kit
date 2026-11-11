@@ -90,11 +90,13 @@ jobs:
       contents: read # to check out the tagged commit
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        # Its `git init` names the branch, so git prints no hint about its default name.
+        # Its `git init` names the branch, and a check sits on a detached ref by design: no advice.
         env:
-          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_COUNT: '2'
           GIT_CONFIG_KEY_0: init.defaultBranch
           GIT_CONFIG_VALUE_0: main
+          GIT_CONFIG_KEY_1: advice.detachedHead
+          GIT_CONFIG_VALUE_1: 'false'
         with:
           ref: ${{ needs.please.outputs.tag }}
           persist-credentials: false
@@ -169,11 +171,13 @@ jobs:
       id-token: write # to publish with npm's trusted publishing and sign the provenance
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        # Its `git init` names the branch, so git prints no hint about its default name.
+        # Its `git init` names the branch, and a check sits on a detached ref by design: no advice.
         env:
-          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_COUNT: '2'
           GIT_CONFIG_KEY_0: init.defaultBranch
           GIT_CONFIG_VALUE_0: main
+          GIT_CONFIG_KEY_1: advice.detachedHead
+          GIT_CONFIG_VALUE_1: 'false'
         with:
           ref: ${{ needs.please.outputs.tag }}
           persist-credentials: false
