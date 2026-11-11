@@ -24,6 +24,8 @@ reason = "The accessibility checker (MPL-2.0) that kit's tests inject into the p
 
 [[PackageOverrides]]
 name = "sentry"
+# One release, so a new one, under whatever licence it carries, is checked again.
+version = "0.45.0"
 ecosystem = "npm"
 license.ignore = true
-reason = "The Sentry CLI (FSL-1.1-Apache-2.0), which Lighthouse's @sentry/node installs: Lighthouse loads Sentry only to report its own errors, which kit leaves off, and never runs the CLI"
+reason = "The Sentry CLI, source-available under FSL-1.1-Apache-2.0 (no competing use; Apache-2.0 two years on), which Lighthouse's @sentry/node installs: Lighthouse loads Sentry only to report its own errors, which kit leaves off, and never runs the CLI"
