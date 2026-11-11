@@ -6,6 +6,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { availableParallelism } from 'node:os';
 
 import { described, HOLDER_HEADER } from './hold.ts';
+import { STILLNESS, type Stillness, type Watch, watchOf } from './stall.ts';
 
 /** The fixed local port the machine's one CPU gate listens on: every run finds it there. */
 export const GATE_PORT = 47_391;
@@ -29,7 +30,7 @@ export const SLOTS = availableParallelism();
 export const WHOLE = 'whole';
 
 /** A hold this process serves, held or waited for, by whom and since when (epoch ms). */
-export interface Holding {
+interface Holding {
   readonly what: string;
   readonly who: string;
   since: number;
@@ -120,10 +121,11 @@ export interface Semaphore {
   readonly refuse: (run: string) => void;
 }
 
-/** The free slots and the turns waiting for them, in the order they asked. */
+/** The free slots and the turns waiting for them, in the order they asked, and its watch. */
 interface Queue {
   free: number;
   readonly waiting: Set<Waiting>;
+  readonly watch: Watch;
 }
 
 /** Grants the waiting turns in order while the first fits, so a turn asking more than are free
@@ -145,17 +147,28 @@ const enqueue = async (
   gone: AbortSignal,
 ): Promise<void> => {
   const { promise, resolve, reject } = Promise.withResolvers<boolean>();
+  const done = queue.watch.waiting((stalled) => {
+    queue.waiting.delete(waiting);
+    waiting.refuse(stalled);
+    admit(queue);
+  });
   const waiting: Waiting = {
     run,
     slots,
     grant: () => {
+      done();
+      queue.watch.moved();
       resolve(true);
     },
-    refuse: reject,
+    refuse: (reason) => {
+      done();
+      reject(reason);
+    },
   };
   gone.addEventListener(
     'abort',
     () => {
+      done();
       queue.waiting.delete(waiting);
       admit(queue);
     },
@@ -167,12 +180,18 @@ const enqueue = async (
 };
 
 /** The slots, first come, first served, so a whole-machine turn is never starved. A set keeps the
- *  order with O(1) removal. */
-export const semaphore = (slots: number): Semaphore => {
-  const queue: Queue = { free: slots, waiting: new Set() };
+ *  order with O(1) removal. A wait fails once no slot has changed hands for the stillness's stall,
+ *  saying `what` stood still. */
+export const semaphore = (
+  slots: number,
+  { stillness = STILLNESS, what = 'no slot' }: { stillness?: Stillness; what?: string } = {},
+): Semaphore => {
+  const watch = watchOf(stillness, { what, named: holdingsNamed });
+  const queue: Queue = { free: slots, waiting: new Set(), watch };
   return {
     take: async (run, asked, gone) => enqueue(queue, { run, slots: asked }, gone),
     give: (given) => {
+      watch.moved();
       queue.free += given;
       admit(queue);
     },
@@ -268,7 +287,8 @@ const answer =
 /** The gate on a listening server: a run joins, holds turns while joined, and leaves. Its last
  *  member's leave closes the port before anything else, so a join it then refuses finds it free. */
 const gateOn = (server: Server, slots: number): Gate => {
-  const runs: Runs = { turns: semaphore(slots), slots, members: new Set(), left: new Set() };
+  const turns = semaphore(slots, { what: 'no CPU turn' });
+  const runs: Runs = { turns, slots, members: new Set(), left: new Set() };
   const gate: Gate = {
     hold: (run) => {
       runs.left.delete(run);

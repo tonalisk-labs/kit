@@ -20,7 +20,7 @@ type Engine = (typeof ENGINES)[number];
 const PORTS: Readonly<Record<Engine, number>> = { chromium: 3000, webkit: 3001 };
 
 /** Where each engine's browser is served, by engine. */
-export type Endpoints = Readonly<Record<Engine, string>>;
+type Endpoints = Readonly<Record<Engine, string>>;
 
 export interface BrowserServer extends Service {
   readonly endpoints: Endpoints;

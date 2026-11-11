@@ -4,9 +4,10 @@ import { createServer } from 'node:http';
 import { test } from 'node:test';
 
 import { HOST_ENV, holdBrowserSeat } from '../src/stack/control.ts';
-import { answerHolders, holderOf } from '../src/stack/gate-server.ts';
+import { answerHolders, holderOf, semaphore } from '../src/stack/gate-server.ts';
 import { openHold } from '../src/stack/hold.ts';
-import { type Clock, seatPool, stackLocks } from '../src/stack/lock.ts';
+import { seatPool, stackLocks } from '../src/stack/lock.ts';
+import { type Clock, STILLNESS, type Stillness } from '../src/stack/stall.ts';
 
 const flush = async (): Promise<void> =>
   new Promise((resolve) => {
@@ -92,9 +93,9 @@ await test('many waiting sharers are all let in at once, by the one give', async
 const withPool = async (
   size: number,
   work: () => Promise<void>,
-  bound: { readonly stall?: number; readonly clock?: Clock } = {},
+  stillness: Stillness = STILLNESS,
 ): Promise<void> => {
-  const pooled = seatPool(size, bound);
+  const pooled = seatPool(size, stillness);
   const server = createServer((incoming, outgoing) => {
     incoming.resume();
     if (incoming.url === '/holders') {
@@ -206,4 +207,22 @@ await test('a seat wait outlives its bound while seats change hands, and fails o
     },
     { stall: 1000, clock },
   );
+});
+
+await test('a stack hold’s wait fails once no hold on its stack changes hands, and a CPU turn’s the same', async () => {
+  const { clock, advance } = manualClock();
+  const stillness = { stall: 1000, clock };
+  const locks = stackLocks(stillness);
+  await locks.take('t', 'own', new AbortController().signal);
+  const sharer = locks.take('t', 'share', new AbortController().signal);
+  const turns = semaphore(1, { stillness, what: 'no CPU turn' });
+  await turns.take('run', 1, new AbortController().signal);
+  const turn = turns.take('run', 1, new AbortController().signal);
+  advance(999);
+  await flush();
+  advance(1);
+  await assert.rejects(sharer, { message: /^no hold on t changed hands in 1 s: /u });
+  await assert.rejects(turn, { message: /^no CPU turn changed hands in 1 s: /u });
+  locks.give('t', 'own');
+  await locks.take('t', 'share', new AbortController().signal);
 });
