@@ -18,6 +18,8 @@ jobs:
       contents: write # to tag and attach the release
       id-token: write # to sign the attestations
       attestations: write # to store the attestations
+    secrets:
+      RELEASE_APP_KEY: {% raw %}${{ secrets.RELEASE_APP_KEY }}{% endraw %}
 {%- if pages %}
     with:
       pages: true
