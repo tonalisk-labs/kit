@@ -49,7 +49,60 @@ jobs:
       - if: hashFiles('Cargo.lock') != ''
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - run: npm ci
-      - run: npx playwright install --with-deps
+      # Playwright's browsers and their Ubuntu packages come from a cache keyed on the runner image
+      # and Playwright's version, so a run needs neither Ubuntu's mirrors nor Playwright's CDN.
+      - id: playwright
+        if: hashFiles('node_modules/@playwright/test/package.json') != ''
+        run: |
+          version=$(node -p "require('@playwright/test/package.json').version")
+          image="$(printenv ImageOS)-$(printenv ImageVersion)"
+          echo "key=playwright-${image}-${RUNNER_ARCH}-${version}" >> "$GITHUB_OUTPUT"
+      - id: playwright-cache
+        if: steps.playwright.outputs.key != ''
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/playwright-apt
+          key: ${{ steps.playwright.outputs.key }}
+      # A miss keeps the packages the browsers lack, as apt resolves them, and the lists it read.
+      - if: steps.playwright.outputs.key != '' && steps.playwright-cache.outputs.cache-hit != 'true'
+        run: |
+          store="$HOME/.cache/playwright-apt"
+          mkdir -p "$store/archives" "$store/lists"
+          # A mirror out of reach fails the run here, at once, not package by package later.
+          sudo apt-get update --error-on=any
+          # It exits 1 when it lists packages, as it does on a fresh runner.
+          report=$(npx playwright install-deps --dry-run) ||
+            grep -q '^Missing system dependencies' <<< "$report"
+          sed -n 's/^  //p' <<< "$report" > "$store/packages"
+          if [ -s "$store/packages" ]; then
+            xargs sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+              --download-only < "$store/packages"
+            cp /var/cache/apt/archives/*.deb "$store/archives/"
+          fi
+          sudo find /var/lib/apt/lists -maxdepth 1 -type f ! -name lock \
+            -exec cp -t "$store/lists" {} +
+          sudo chown -R "$USER" "$store"
+          npx playwright install
+      - if: steps.playwright.outputs.key != '' && steps.playwright-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/playwright-apt
+          key: ${{ steps.playwright.outputs.key }}
+      # apt installs from the kept packages alone, with the lists they came from.
+      - if: steps.playwright.outputs.key != ''
+        run: |
+          store="$HOME/.cache/playwright-apt"
+          if [ -s "$store/packages" ]; then
+            sudo cp "$store/lists/"* /var/lib/apt/lists/
+            sudo cp "$store/archives/"*.deb /var/cache/apt/archives/
+            xargs sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+              --no-download < "$store/packages"
+          fi
+          npx playwright install
       # The full matrix is every row, which E2E_TIER names by being unset.
       - run: |
           if [ "$TIER" != full ]; then
