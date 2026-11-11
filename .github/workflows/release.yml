@@ -1,8 +1,8 @@
 # Each public repo's releases. release-please keeps a release PR open with the changelog; merging it
 # tags the version. The tagged commit then passes `mise run release-check`, and
 # `mise run artifacts` writes the release files to out/ and, for Pages, the site to pages/. Each
-# file is attested and attached to the GitHub Release, with an SBOM. Optionally the site goes to
-# GitHub Pages and the package to npm, through npm's trusted publishing.
+# file is attested and attached to the GitHub Release, with an SBOM. Optionally the package goes to
+# npm, through npm's trusted publishing, and the site is uploaded for pages.yml to deploy.
 #
 # The build runs the repo's own code and its dependencies, so it holds only a read token. Signing,
 # attaching and publishing happen in jobs that run nothing from the repo, each holding only what it
@@ -17,13 +17,20 @@ on:
   workflow_call:
     inputs:
       pages:
-        description: Deploy pages/ to GitHub Pages.
+        description: Upload pages/ as the run's Pages artifact, which pages.yml deploys.
         type: boolean
         default: false
       npm:
         description: Publish out/*.tgz to npm with trusted publishing.
         type: boolean
         default: false
+    outputs:
+      created:
+        description: Whether this run made a release.
+        value: ${{ jobs.please.outputs.created }}
+      tag:
+        description: The release's tag, when this run made one.
+        value: ${{ jobs.please.outputs.tag }}
 
 permissions: {}
 
@@ -156,20 +163,3 @@ jobs:
           name: release
           path: out
       - run: npm publish out/*.tgz --provenance --access public
-
-  pages:
-    name: deploy to Pages
-    needs: attest
-    if: inputs.pages
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    permissions:
-      pages: write # to deploy the site
-      id-token: write # to prove where the deployment comes from
-    steps:
-      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-      - id: deploy
-        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

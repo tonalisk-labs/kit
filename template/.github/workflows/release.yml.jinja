@@ -19,7 +19,14 @@ jobs:
       id-token: write # to sign the attestations
       attestations: write # to store the attestations
 {%- if pages %}
-      pages: write # to deploy the site
     with:
       pages: true
+  # The site goes to Pages once a release is made, and only this job may deploy it.
+  pages:
+    needs: release
+    if: needs.release.outputs.created == 'true'
+    uses: tonalisk-labs/kit/.github/workflows/pages.yml@{{ _copier_conf.vcs_ref_hash }} # {{ _commit }}
+    permissions:
+      pages: write # to deploy the site
+      id-token: write # to prove where the deployment comes from
 {%- endif %}

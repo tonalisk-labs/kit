@@ -11,6 +11,9 @@ mise generate git-pre-commit --write --hook=pre-push --task=check
 
 `mise run check` is what a pull request runs, and the last line makes git run it before each push.
 
+To try a change in a site before releasing it, run `npm run build` here, then
+`npm install --no-save ../kit` in the site.
+
 - **Commits and pull request titles** follow [Conventional Commits](https://www.conventionalcommits.org).
   A pull request is squash-merged under its title, which becomes one line of the changelog.
 - **Comments** say only what the code can't: why it's done this way, an invariant, a non-obvious

@@ -1,0 +1,25 @@
+# A release's site to GitHub Pages: a repo that serves one calls this after release.yml with
+# `pages: true`, once a release is made, so only this job holds the permissions a deploy needs.
+name: pages
+
+on:
+  workflow_call:
+
+permissions: {}
+
+jobs:
+  deploy:
+    name: deploy to Pages
+    runs-on: ubuntu-24.04
+    # A hung runner or download ends here, not after GitHub's 6 hours.
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    permissions:
+      pages: write # to deploy the site
+      id-token: write # to prove where the deployment comes from
+    steps:
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
