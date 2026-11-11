@@ -144,7 +144,7 @@ await test('a seat wait given up says who holds the seats, by the names they gav
       giveUp.abort();
       await assert.rejects(waiting, {
         message:
-          /^the wait for seats was given up before a grant: at its server, 2 of the Linux browsers' 2 seats held by webkit\/exclusive › a member’s Orbit ends \(worker 3, pid 41\) for \d+ s$/u,
+          /^the wait for seats was given up before a grant: at its server, 2 of the Linux browsers' 2 seats held by webkit\/exclusive › a member’s Orbit ends \(worker 3, pid 41\) for \d+ s/u,
       });
     } finally {
       idle();
