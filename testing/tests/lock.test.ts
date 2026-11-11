@@ -128,15 +128,24 @@ await test('a worker takes every seat it declares at once, and one asking more t
 /** A refusal no test here expects. */
 const refused = (): string => 'refused';
 
-await test('a seat wait past its bound fails, naming who holds the seats and who waits', async () =>
+await test('a seat wait given up says who holds the seats, by the names they gave', async () =>
   withPool(2, async () => {
     const url = new URL('/browser/2', process.env[HOST_ENV]);
-    const idle = await openHold(url, { held: 'seats', refused }, { who: 'an idle worker' });
+    const holder = 'webkit/exclusive › a member’s Orbit ends (worker 3, pid 41)';
+    const idle = await openHold(url, { held: 'seats', refused }, { who: holder });
+    const giveUp = new AbortController();
     try {
-      await assert.rejects(
-        openHold(url, { held: 'seats', refused, bound: 50 }, { who: 'a visual test' }),
-        /^Error: seats was not granted within 0\.05 s: at its server, 2 of the Linux browsers' 2 seats held by an idle worker for \d+ s; 2 of the Linux browsers' 2 seats waited for by a visual test for \d+ s$/u,
+      const waiting = openHold(
+        url,
+        { held: 'seats', refused },
+        { signal: giveUp.signal, who: 'visual-01 › J8 (worker 5, pid 52)' },
       );
+      await flush();
+      giveUp.abort();
+      await assert.rejects(waiting, {
+        message:
+          /^the wait for seats was given up before a grant: at its server, 2 of the Linux browsers' 2 seats held by webkit\/exclusive › a member’s Orbit ends \(worker 3, pid 41\) for \d+ s$/u,
+      });
     } finally {
       idle();
     }

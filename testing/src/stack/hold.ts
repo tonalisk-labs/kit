@@ -4,12 +4,9 @@ import { type ClientRequest, type IncomingMessage, request } from 'node:http';
 
 import { isObject } from '../unknown.ts';
 
-/** The header a hold's request names its holder in: its test, worker and process. */
+/** The header a hold's request names its holder in (its test, worker and process), URI-encoded
+ *  for the characters a test's title holds and a header can't. */
 export const HOLDER_HEADER = 'x-kit-holder';
-
-/** How long a hold waits to be granted before the wait fails, naming who holds and who waits:
- *  each holder is a test under its own timeout, so a wait this long is a leak, not a queue. */
-export const HOLD_BOUND_MS = 600_000;
 
 /** A kind of hold: what it is called, what a refusal of it says, and who hears should the server
  *  end it first; with no one named, the holder's release fails instead. */
@@ -17,8 +14,6 @@ export interface HoldKind {
   readonly held: string;
   readonly refused: (status: number | undefined) => string;
   readonly ended?: () => void;
-  /** How long its wait may last, HOLD_BOUND_MS unless named. */
-  readonly bound?: number;
 }
 
 /** One holding a server lists: what, by whom, since when, held or waited for. */
@@ -79,18 +74,17 @@ const releaseOf = (
   };
 };
 
-/** Asks `url` for a hold, answering its release once granted; an abort gives up a hold not yet
- *  granted, and ends one that is. */
+/** Asks `url` for a hold, answering its release once granted; an abort ends one that is, and gives
+ *  up one not yet granted with an AbortError naming who held what it waited for. */
 export const openHold = async (
   url: URL,
   kind: HoldKind,
   { signal, who }: { readonly signal?: AbortSignal | undefined; readonly who?: string } = {},
 ): Promise<() => void> => {
   const { promise, resolve, reject } = Promise.withResolvers<() => void>();
-  const headers = who === undefined ? {} : { [HOLDER_HEADER]: who };
-  const waiting: { bound?: NodeJS.Timeout; failing?: Promise<void> } = {};
+  const headers = who === undefined ? {} : { [HOLDER_HEADER]: encodeURIComponent(who) };
+  const waiting: { failing?: Promise<void> } = {};
   const call = request(url, { method: 'POST', signal, headers }, (response) => {
-    clearTimeout(waiting.bound);
     const { statusCode: status } = response;
     // Read: a refusal to its end, so its socket is freed, as one left unread holds the process open;
     // a grant, so that its server ending it whole is heard.
@@ -101,17 +95,16 @@ export const openHold = async (
       reject(refusal(kind.refused(status), status));
     }
   });
-  const bound = kind.bound ?? HOLD_BOUND_MS;
-  waiting.bound = setTimeout(() => {
-    waiting.failing = holdersAt(url.origin).then((holders) => {
-      const after = `${String(bound / 1000)} s`;
-      reject(new Error(`${kind.held} was not granted within ${after}: at its server, ${holders}`));
-      call.destroy();
-    });
-  }, bound);
   call.on('error', (error) => {
-    clearTimeout(waiting.bound);
-    reject(error);
+    if (signal === undefined || !signal.aborted) {
+      reject(error);
+      return;
+    }
+    waiting.failing = holdersAt(url.origin).then((holders) => {
+      const given = `the wait for ${kind.held} was given up before a grant`;
+      const named = new Error(`${given}: at its server, ${holders}`, { cause: error });
+      reject(Object.assign(named, { name: 'AbortError' }));
+    });
   });
   call.end();
   return promise;

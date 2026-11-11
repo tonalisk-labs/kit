@@ -47,10 +47,18 @@ export interface Served {
   readonly who: string;
 }
 
-/** The holder a request names, or that it named none. */
+/** The holder a request names, decoded, or as sent where it isn't URI-encoded; or that it named
+ *  none. */
 export const holderOf = (incoming: IncomingMessage): string => {
   const named = incoming.headers[HOLDER_HEADER];
-  return typeof named === 'string' && named !== '' ? named : 'an unnamed holder';
+  if (typeof named !== 'string' || named === '') {
+    return 'an unnamed holder';
+  }
+  try {
+    return decodeURIComponent(named);
+  } catch {
+    return named;
+  }
 };
 
 /** Answers a GET /holders with this process's holdings, as JSON. */
