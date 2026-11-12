@@ -6,7 +6,12 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
-import { browserServerSpec, deviceBudget, playwrightCore } from '../src/stack/browsers.ts';
+import {
+  browserServerSpec,
+  deviceBudget,
+  endpointOf,
+  playwrightCore,
+} from '../src/stack/browsers.ts';
 import { localCaCertificate } from '../src/stack/tls.ts';
 
 const KEY = /PRIVATE KEY/u;
@@ -57,4 +62,15 @@ await test('three devices asked for together at 4 contexts are counted before an
   assert.throws(reserve, /declare more with test\.use\(\{ browserContexts \}\)/u);
   again();
   assert.throws(deviceBudget(1), /at most 1 browser contexts open/u);
+});
+
+await test("each engine's endpoint is read from the stack host's variable, and none where it names none", () => {
+  const given = JSON.stringify({
+    chromium: 'ws://127.0.0.1:1/chromium',
+    webkit: 'ws://127.0.0.1:2/webkit',
+  });
+  assert.equal(endpointOf('webkit', given), 'ws://127.0.0.1:2/webkit');
+  assert.equal(endpointOf('chromium', given), 'ws://127.0.0.1:1/chromium');
+  assert.equal(endpointOf('firefox', given), undefined);
+  assert.equal(endpointOf('webkit'), undefined);
 });

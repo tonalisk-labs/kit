@@ -12,7 +12,14 @@ import {
   STACK_ENV,
 } from './control.ts';
 import { joinGate, type Membership } from './gate-member.ts';
-import { holdOpen } from './gate-server.ts';
+import {
+  answerDeadline,
+  answerHolders,
+  deadlineOf,
+  holderOf,
+  holdIdOf,
+  holdOpen,
+} from './gate-server.ts';
 import { seatPool, stackLocks } from './lock.ts';
 import type { Service } from './process.ts';
 import { startTarget } from './stack.ts';
@@ -32,7 +39,7 @@ interface Entry {
 const startKey = async (key: string, turns: string, signal: AbortSignal): Promise<Started> => {
   if (key === LINUX_BROWSERS) {
     const server = await startBrowserServer(signal);
-    return { env: { [LINUX_ENV]: server.wsEndpoint }, stop: server.stop };
+    return { env: { [LINUX_ENV]: JSON.stringify(server.endpoints) }, stop: server.stop };
   }
   const target = discover().find(({ name }) => name === key);
   if (target === undefined) {
@@ -105,20 +112,36 @@ interface Hosted {
 const handle =
   (hosted: Hosted) =>
   (incoming: IncomingMessage, outgoing: ServerResponse): void => {
-    const [, action = '', key = ''] = (incoming.url ?? '').split('/');
+    const [, action = '', key = '', given = ''] = (incoming.url ?? '').split('/');
+    if (action === 'holders') {
+      answerHolders(outgoing);
+      return;
+    }
+    if (action === 'deadline') {
+      answerDeadline(outgoing, key, given);
+      return;
+    }
     if (action === 'browser') {
-      browsers(outgoing, key);
+      browsers(outgoing, key, {
+        who: holderOf(incoming),
+        deadline: deadlineOf(incoming),
+        id: holdIdOf(incoming),
+      });
       return;
     }
     if (action === 'share' || action === 'own') {
       const stack = decodeURIComponent(key);
-      holdOpen(
-        outgoing,
-        async (gone) => locks.take(stack, action, gone),
-        () => {
+      holdOpen(outgoing, {
+        take: async (gone) => locks.take(stack, action, gone),
+        give: () => {
           locks.give(stack, action);
         },
-      );
+        what: `a ${action} hold on ${stack}`,
+        who: holderOf(incoming),
+        deadline: deadlineOf(incoming),
+        watch: locks.watch(stack),
+        id: holdIdOf(incoming),
+      });
       return;
     }
     const called = ACTIONS.find((known) => known === action);

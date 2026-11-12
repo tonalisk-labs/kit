@@ -21,7 +21,8 @@ export const STACK_ENV = 'KIT_STACK';
  *  a keychain prompt, and the visual projects' Chromium, so screenshots match on every machine. */
 export const LINUX_BROWSERS = 'linux-browsers';
 
-/** The variable WebKit rows and the visual projects read that server's endpoint from. */
+/** The variable WebKit rows and the visual projects read that server's endpoints from, by engine,
+ *  in JSON. */
 export const LINUX_ENV = 'KIT_LINUX_BROWSERS';
 
 export type Action = 'start' | 'stop' | 'restart';
@@ -65,6 +66,59 @@ export const control = async (action: Action, key: string): Promise<Record<strin
   return promise;
 };
 
+/** The running test's clock, as Playwright keeps its timeout: when it began, and how long it has
+ *  waited for holds in fixtures of their own timeout, which aren't charged to it. */
+export interface TestClock {
+  start: number;
+  waited: number;
+}
+
+/** This worker's running test's clock: a worker runs one test at a time. */
+const running: TestClock = { start: Date.now(), waited: 0 };
+
+/** Starts the running test's clock (fixtures.ts), at `now`. */
+export const testBegins = (now: number = Date.now()): void => {
+  running.start = now;
+  running.waited = 0;
+};
+
+/** When a test must end, by Playwright's count: its start, plus the hold waits it isn't charged,
+ *  plus its timeout; none for a test with no timeout. A hold's server lets a stillness pass while
+ *  its holders are inside their deadlines; the test moves them as its timeout moves. */
+export const deadlineFrom = (timeout: number, clock: TestClock = running): number | undefined =>
+  timeout > 0 ? clock.start + clock.waited + timeout : undefined;
+
+/** `wait` for a hold, its time added to the running test's waits, which its deadline is past. */
+export const waitedFor = async <Value>(wait: () => Promise<Value>): Promise<Value> => {
+  const asked = Date.now();
+  try {
+    return await wait();
+  } finally {
+    running.waited += Date.now() - asked;
+  }
+};
+
+const holderDeadline = (): number | undefined => {
+  try {
+    return deadlineFrom(test.info().timeout);
+  } catch {
+    return undefined;
+  }
+};
+
+/** Who asks for a hold, for its server's holder record: the running test, if any, its worker and
+ *  its process, so a wait past its bound names who held what. */
+const holderName = (): string => {
+  const worker = process.env['TEST_WORKER_INDEX'];
+  const where = `${worker === undefined ? '' : `worker ${worker}, `}pid ${String(process.pid)}`;
+  try {
+    const info = test.info();
+    return `${info.project.name} › ${info.title} (${where})`;
+  } catch {
+    return where;
+  }
+};
+
 /**
  * Holds a target's stack, shared or owned alone, until the returned release is called: the hold
  * is an open request, so a worker that dies releases it by closing its connection.
@@ -79,10 +133,11 @@ export const holdStack = async (hold: 'share' | 'own', key: string): Promise<() 
       held: `a ${hold} hold on ${key}`,
       refused: () => `the stack host refused a ${hold} hold on ${key}`,
     },
+    { who: holderName(), deadline: holderDeadline() },
   );
 
-/** A seat among the Linux image's browsers for each context the worker's tests have open at once,
- *  all taken together and held as a stack hold is, for the worker's life. */
+/** A seat among the Linux image's browsers for each context the test may have open at once, all
+ *  taken together and held as a stack hold is, for the test's life. */
 export const holdBrowserSeat = async (contexts: number): Promise<() => void> =>
   openHold(
     new URL(
@@ -96,6 +151,7 @@ export const holdBrowserSeat = async (contexts: number): Promise<() => void> =>
           ? `the Linux browsers seat fewer than the ${String(contexts)} browserContexts declared`
           : 'the stack host refused seats among the Linux browsers',
     },
+    { who: holderName(), deadline: holderDeadline() },
   );
 
 const runTurns = (): string => required(CPU_GATE_ENV, 'the global setup joins the CPU gate');
@@ -108,7 +164,7 @@ const TURN: HoldKind = {
 
 /** A CPU turn, until the returned release; an abort gives up a turn still waiting. */
 export const holdTurn = async (turns: string, signal?: AbortSignal): Promise<() => void> =>
-  openHold(new URL(turns), TURN, signal);
+  openHold(new URL(turns), TURN, { signal, who: holderName(), deadline: holderDeadline() });
 
 /** A test's CPU turn: its release, its widening once claimed, and the test's end, which gives up
  *  a widening still waiting, so no every-slot turn is granted after its test. */
