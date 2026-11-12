@@ -2,8 +2,9 @@ import { readFileSync } from 'node:fs';
 
 import { isObject } from './unknown.ts';
 
-/** A header line of a spec naming the configuration keys it proves, comma separated. */
-const COVERS = /^\s*(?:\/\/|\*)\s*Covers:\s*(?<keys>.+)$/gmu;
+/** A header line of a spec naming the configuration keys it proves, comma separated. Its blanks
+ *  are spaces and tabs only, so it never reaches the next line, and it reads in linear time. */
+const COVERS = /^[ \t]*(?:\/\/|\*)[ \t]*Covers:[ \t]*(?<keys>\S.*)$/gmu;
 
 /** The keys a spec's header claims, as dotted paths: `limits.max_open_notes`. */
 export const claimsIn = (source: string): string[] =>

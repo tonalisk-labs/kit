@@ -90,7 +90,8 @@ jobs:
       contents: read # to check out the tagged commit
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        # Its `git init` names the branch, and it checks out a detached ref on purpose: no advice.
+        # Its `git init` names the branch, and a pull request's merge ref or a release's tag is
+        # detached on purpose: no advice.
         env:
           GIT_CONFIG_COUNT: '2'
           GIT_CONFIG_KEY_0: init.defaultBranch
@@ -171,7 +172,8 @@ jobs:
       id-token: write # to publish with npm's trusted publishing and sign the provenance
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        # Its `git init` names the branch, and it checks out a detached ref on purpose: no advice.
+        # Its `git init` names the branch, and a pull request's merge ref or a release's tag is
+        # detached on purpose: no advice.
         env:
           GIT_CONFIG_COUNT: '2'
           GIT_CONFIG_KEY_0: init.defaultBranch
