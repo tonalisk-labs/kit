@@ -8,13 +8,13 @@ kit is public, so its Actions minutes are free. Every action is pinned to a comm
 | `publish.yml` | each push to `main`                          | `release.yml` with npm                            |
 | `checks.yml`  | called by the public sites' CI               | `mise run check` and the title                    |
 | `e2e.yml`     | called by the public sites' CI               | the journeys, and at release the screens on arm64 |
-| `release.yml` | called by `publish.yml` and the public sites | release-please, then the release, attested        |
+| `release.yml` | called by `publish.yml` and the public sites | release-please, a draft attested, then published  |
 | `pages.yml`   | called by the public sites after a release   | the site, deployed to GitHub Pages                |
 
-A release builds with a read token only. The files are attested and attached in a job that runs
-nothing from the repo, and npm takes the package in another, through
-[trusted publishing](https://docs.npmjs.com/trusted-publishers), with no npm token. The
-package's provenance names the run that published it.
+A release builds with a read token only. Jobs that run nothing from the repo attest the files and
+attach them to a draft, give npm the package through
+[trusted publishing](https://docs.npmjs.com/trusted-publishers) with no npm token, its provenance
+naming the run, and then publish the draft, as an immutable release takes no file once published.
 
 To set npm up once, publish a first version by hand, as npm attaches a trusted publisher only to a
 package that exists. On npmjs.com, add GitHub Actions as its trusted publisher (`tonalisk-labs/kit`,

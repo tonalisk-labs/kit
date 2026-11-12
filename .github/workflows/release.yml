@@ -1,8 +1,14 @@
 # Each public repo's releases. release-please keeps a release PR open with the changelog; merging it
-# tags the version. The tagged commit then passes `mise run release-check`, and
-# `mise run artifacts` writes the release files to out/ and, for Pages, the site to pages/. Each
-# file is attested and attached to the GitHub Release, with an SBOM. Optionally the package goes to
-# npm, through npm's trusted publishing, and the site is uploaded for pages.yml to deploy.
+# tags the version and drafts its GitHub Release. The tagged commit then passes
+# `mise run release-check`, and `mise run artifacts` writes the release files to out/ and, for
+# Pages, the site to pages/. Each file is attested and attached to the draft, with an SBOM.
+# Optionally the package goes to npm, through npm's trusted publishing, and the site is uploaded for
+# pages.yml to deploy.
+#
+# The draft is published last. A published release is immutable, its files and tag fixed, so
+# GitHub's flow attaches every file to a draft and then publishes it. The caller's
+# release-please-config.json sets `draft` and `force-tag-creation`: GitHub would tag a draft only
+# once it's published, and the build checks out the tag before then.
 #
 # The build runs the repo's own code and its dependencies, so it holds only a read token. Signing,
 # attaching and publishing happen in jobs that run nothing from the repo, each holding only what it
@@ -79,6 +85,12 @@ jobs:
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           token: ${{ steps.token.outputs.token }}
+      # A published release would already be immutable, and take none of the files.
+      - if: steps.please.outputs.release_created == 'true' && steps.please.outputs.draft != 'true'
+        run: |
+          echo "::error::release-please published the release before its files were attached:" \
+            "set draft and force-tag-creation in release-please-config.json"
+          exit 1
 
   build:
     name: check and build
@@ -139,7 +151,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
-      contents: write # to attach the files to the release
+      contents: write # to attach the files to the draft
       id-token: write # to sign the attestations
       attestations: write # to store the attestations
     env:
@@ -150,10 +162,10 @@ jobs:
         with:
           name: release
           path: out
-      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: out/*
-      - uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: out/*
           sbom-path: out/sbom.spdx.json
@@ -198,3 +210,22 @@ jobs:
           name: release
           path: out
       - run: npm publish out/*.tgz --provenance --access public
+
+  # Last, after npm: a job that fails before this leaves a draft to rerun, where a published release
+  # would stay without its package for good.
+  publish:
+    name: publish the release
+    needs: [please, attest, npm]
+    if: >-
+      ${{ !cancelled() && needs.attest.result == 'success'
+      && (needs.npm.result == 'success' || needs.npm.result == 'skipped') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write # to publish the draft
+    steps:
+      - run: gh release edit "$TAG" --draft=false
+        env:
+          TAG: ${{ needs.please.outputs.tag }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
