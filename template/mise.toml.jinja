@@ -18,9 +18,18 @@ gitleaks = "8.30.1"
 # whatever package has its name.
 {% raw %}_.path = ["{{config_root}}/node_modules/.bin"]{% endraw %}
 
+{%- if rust %}
+
+# What rust-toolchain.toml pins, installed once before any task runs cargo: mise starts those tasks
+# together, and the first cargo in each would download it into the same folder.
+[tasks.toolchain]
+run = "rustup toolchain install --no-self-update"
+{%- endif %}
+
 # Each task is written as kit's formatter lays it out: a list that fits in a line stays on one.
 [tasks.format]
 {%- if rust %}
+depends = ["toolchain"]
 run = [
   "oxfmt --check -c node_modules/@tonalisk-labs/kit/rules/oxfmt.json",
   "shfmt --diff .",
@@ -32,6 +41,7 @@ run = ["oxfmt --check -c node_modules/@tonalisk-labs/kit/rules/oxfmt.json", "shf
 
 [tasks.lint]
 {%- if rust %}
+depends = ["toolchain"]
 run = [
   "oxlint",
   "editorconfig-checker",
