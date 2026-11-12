@@ -14,7 +14,8 @@ export interface Clock {
   readonly after: (ms: number, ring: () => void) => () => void;
 }
 
-/** Wall-clock time, as a holder's deadline is: its test's start, plus its timeout. */
+/** Wall-clock time, as a holder's deadline is: its test's start, plus the hold waits it isn't
+ *  charged, plus its timeout (control.ts). */
 const WALL: Clock = {
   now: () => Date.now(),
   after: (ms, ring) => {

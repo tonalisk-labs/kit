@@ -12,7 +12,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { HOST_ENV } from '../src/stack/control.ts';
+import { deadlineFrom, HOST_ENV } from '../src/stack/control.ts';
 import { DEADLINE_HEADER } from '../src/stack/hold.ts';
 
 const require = createRequire(import.meta.url);
@@ -88,12 +88,23 @@ await test('a timeout set, made slow, or set to none moves the deadline of every
   } finally {
     host.close();
   }
-  const [asked, longer, slower, none] = host.said;
+  // Asked with the default 30 s; told again once granted, its wait not being the test's; then
+  // each move the test makes, in order.
+  const [asked, granted, longer, slower, none] = host.said;
   const after = (said = ''): number => Number(said.split(' ')[1]) - started;
   assert.match(asked ?? '', /^asked \d+$/u);
-  assert.ok(after(asked) >= 30_000, String(asked));
+  assert.ok(after(asked) >= 30_000 && after(granted) >= after(asked), host.said.join('\n'));
   assert.ok(after(longer) >= 60_000 && after(longer) < 120_000, String(longer));
   assert.ok(after(slower) >= 180_000, String(slower));
   assert.equal(none, 'moved none');
-  assert.equal(host.said.length, 4, host.said.join('\n'));
+  assert.equal(host.said.length, 5, host.said.join('\n'));
+});
+
+await test('a timeout set mid-test counts from the test’s start and the hold waits it isn’t charged, not from now', () => {
+  // The test began at 1 s on this clock, and its seat took 4 s, a fixture's own time.
+  const clock = { start: 1000, waited: 4000 };
+  assert.equal(deadlineFrom(30_000, clock), 35_000);
+  // At 9 s it sets a 10 s timeout: due at 15 s, as Playwright counts, not at 19 s.
+  assert.equal(deadlineFrom(10_000, clock), 15_000);
+  assert.equal(deadlineFrom(0, clock), undefined);
 });

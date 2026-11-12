@@ -27,6 +27,8 @@ import {
   holdStack,
   deadlineFrom,
   holdTestTurn,
+  testBegins,
+  waitedFor,
   HOST_ENV,
   LINUX_ENV,
   MEASURE_ENV,
@@ -169,6 +171,7 @@ export const apiTest: TestType<
      *  each change moves the deadline its holds' servers bound their waits by (stack/stall.ts). */
     deadlines: [
       async ({ site: _site }, provide, testInfo): Promise<void> => {
+        testBegins();
         const set = testInfo.setTimeout.bind(testInfo);
         const slow = testInfo.slow.bind(testInfo);
         Object.assign(testInfo, {
@@ -209,7 +212,8 @@ export const apiTest: TestType<
           await provide(owns);
           return;
         }
-        const release = await holdStack(owns ? 'own' : 'share', site);
+        const release = await waitedFor(async () => holdStack(owns ? 'own' : 'share', site));
+        announceTimeout(testInfo.timeout);
         try {
           await provide(owns);
         } finally {
@@ -344,12 +348,14 @@ export const test: TestType<
       async (
         { stackHold: _held, browserName, browserContexts, visual },
         provide,
+        testInfo,
       ): Promise<void> => {
         if (!servedByImage(browserName, visual) || process.env[HOST_ENV] === undefined) {
           await provide(false);
           return;
         }
-        const release = await holdBrowserSeat(browserContexts);
+        const release = await waitedFor(async () => holdBrowserSeat(browserContexts));
+        announceTimeout(testInfo.timeout);
         try {
           await provide(true);
         } finally {
@@ -361,8 +367,9 @@ export const test: TestType<
     /** A CPU turn, taken last as every turn is, spans the test's own work; its wait is not the
      *  test's. */
     cpuTurn: [
-      async ({ browserSeat: _seated }, provide): Promise<void> => {
-        const release = await holdTestTurn();
+      async ({ browserSeat: _seated }, provide, testInfo): Promise<void> => {
+        const release = await waitedFor(holdTestTurn);
+        announceTimeout(testInfo.timeout);
         try {
           await provide(true);
         } finally {

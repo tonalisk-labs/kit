@@ -66,11 +66,37 @@ export const control = async (action: Action, key: string): Promise<Record<strin
   return promise;
 };
 
-/** When the running test must end at the latest, its whole timeout from now: none outside a test,
- *  or for a test with no timeout. A hold's server lets a stillness pass while its holders are
- *  inside their deadlines; the test moves them as its timeout moves (fixtures.ts). */
-export const deadlineFrom = (timeout: number): number | undefined =>
-  timeout > 0 ? Date.now() + timeout : undefined;
+/** The running test's clock, as Playwright keeps its timeout: when it began, and how long it has
+ *  waited for holds in fixtures of their own timeout, which aren't charged to it. */
+export interface TestClock {
+  start: number;
+  waited: number;
+}
+
+/** This worker's running test's clock: a worker runs one test at a time. */
+const running: TestClock = { start: Date.now(), waited: 0 };
+
+/** Starts the running test's clock (fixtures.ts), at `now`. */
+export const testBegins = (now: number = Date.now()): void => {
+  running.start = now;
+  running.waited = 0;
+};
+
+/** When a test must end, by Playwright's count: its start, plus the hold waits it isn't charged,
+ *  plus its timeout; none for a test with no timeout. A hold's server lets a stillness pass while
+ *  its holders are inside their deadlines; the test moves them as its timeout moves. */
+export const deadlineFrom = (timeout: number, clock: TestClock = running): number | undefined =>
+  timeout > 0 ? clock.start + clock.waited + timeout : undefined;
+
+/** `wait` for a hold, its time added to the running test's waits, which its deadline is past. */
+export const waitedFor = async <Value>(wait: () => Promise<Value>): Promise<Value> => {
+  const asked = Date.now();
+  try {
+    return await wait();
+  } finally {
+    running.waited += Date.now() - asked;
+  }
+};
 
 const holderDeadline = (): number | undefined => {
   try {
