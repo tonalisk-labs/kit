@@ -331,9 +331,8 @@ export const holdCpuTurn = async (
   },
 ): Promise<() => void> => openHold(new URL(turns), TURN, asking);
 
-/** Runs `work` holding every slot of the machine's CPU gate on `port`, joined for it alone: no
- *  other run's tests share the cores while it runs, for figures their work would skew. The wait
- *  for the slots is the gate's queue, first come, first served. */
+/** Runs `work` holding every slot of the CPU gate on `port`, joined for it alone, once the gate's
+ *  queue reaches it: no other run's tests share the cores while it runs. */
 export const inWholeTurn = async <Value>(
   work: () => Promise<Value>,
   who: string,
