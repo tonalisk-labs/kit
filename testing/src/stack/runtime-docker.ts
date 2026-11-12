@@ -71,11 +71,17 @@ const networkIn = (id: string, answer: string, platform: NodeJS.Platform): Netwo
   }
   const parsed: unknown = JSON.parse(answer);
   const [attached] = isObject(parsed) ? Object.values(parsed) : [];
-  const [own, host] = isObject(attached) ? [attached['IPAddress'], attached['Gateway']] : [];
+  const [own, host, settled] = isObject(attached)
+    ? [attached['IPAddress'], attached['Gateway'], attached['GlobalIPv6Address']]
+    : [];
   if (typeof own !== 'string' || typeof host !== 'string' || own === '' || host === '') {
     throw new TypeError(`docker inspect ${id} answered no network: ${answer}`);
   }
-  return { own, host };
+  return {
+    own,
+    host,
+    settled: typeof settled === 'string' && settled !== '' ? settled : undefined,
+  };
 };
 
 /** Files go in by `docker cp`, which reads on the host side, so no host directory is shared with

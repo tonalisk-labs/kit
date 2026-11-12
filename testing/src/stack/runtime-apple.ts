@@ -96,16 +96,20 @@ const publishedIn = (id: string, answer: string): Map<number, Address> => {
   );
 };
 
+/** An address as an inspect records it, without its prefix length. */
+const bare = (address: string): string => address.replace(/\/\d+$/u, '');
+
 /** A container's address and its network's gateway, the host's address there, as an inspect
  *  records them: the address with its prefix length, which goes. */
 const networkIn = (id: string, answer: string): Network => {
   const networks = field(field(snapshotsIn('inspect', answer)[0], 'status'), 'networks');
   const attached: unknown = Array.isArray(networks) ? networks.at(0) : undefined;
   const [own, host] = [field(attached, 'ipv4Address'), field(attached, 'ipv4Gateway')];
+  const settled = field(attached, 'ipv6Address');
   if (typeof own !== 'string' || typeof host !== 'string') {
     throw new TypeError(`container inspect ${id} answered no network: ${answer}`);
   }
-  return { own: own.replace(/\/\d+$/u, ''), host };
+  return { own: bare(own), host, settled: typeof settled === 'string' ? bare(settled) : undefined };
 };
 
 /** The ids a `list` answers. */

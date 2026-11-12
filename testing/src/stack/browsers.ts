@@ -82,8 +82,9 @@ const LOG_FILE = '/tmp/browsers.log';
  *  server's Node makes a context's own requests, as `route.fetch` and `context.request` do. */
 const CA_FILE = '/usr/local/share/ca-certificates/tonalisk-kit-edge.crt';
 
-/** The pipe the host writes the proxy's address to, once it listens: only then may the browsers
- *  launch, as each takes its proxy at its launch. */
+/** The pipe the host writes the proxy's address to, once it listens, and the IPv6 address the
+ *  container's network gives it: only then may the browsers launch, as each takes its proxy at its
+ *  launch. */
 const PROXY_PIPE = '/tmp/proxy';
 
 /** Launches each engine's browser behind the host's proxy, serving it to every worker. A browser
@@ -95,6 +96,16 @@ const playwright = require('/playwright-core');
 const engines = ${JSON.stringify(Object.entries(PORTS))};
 const proxy = { server: process.env.PROXY };
 const state = { stopping: false, open: engines.length };
+// A browser launched before its network has given the container its IPv6 address hears the
+// address arrive as a network change, and Chromium fails the navigations it has open
+// (ERR_NETWORK_CHANGED): the browsers launch once it's there, or after 30 s without it.
+const settled = async (left = 300) => {
+  const wanted = process.env.SETTLED;
+  const addresses = Object.values(require('node:os').networkInterfaces()).flat();
+  if (!wanted || left === 0 || addresses.some((one) => one.address === wanted)) return;
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  await settled(left - 1);
+};
 process.once('SIGTERM', () => { state.stopping = true; });
 const failed = (error) => { console.error(error); process.exit(1); };
 const serve = async ([engine, port]) => {
@@ -111,6 +122,7 @@ const serve = async ([engine, port]) => {
   console.log(engine + ' serves ' + server.wsEndpoint());
 };
 (async () => {
+  await settled();
   for (const entry of engines) await serve(entry);
 })().catch(failed);
 `;
@@ -121,8 +133,8 @@ const TRUSTED_SERVER = [
   String.raw`printf "%s\n" "$EDGE_CA" > ${CA_FILE}`,
   'update-ca-certificates > /dev/null',
   `{ mkfifo ${PROXY_PIPE} 2> /dev/null || true; }`,
-  `read -r PROXY < ${PROXY_PIPE}`,
-  'export PROXY',
+  `{ read -r PROXY && read -r SETTLED; } < ${PROXY_PIPE}`,
+  'export PROXY SETTLED',
   `exec node -e "$1" > ${LOG_FILE} 2>&1`,
 ].join(' && ');
 
@@ -147,11 +159,19 @@ export const browserServerSpec = (
 /** Starts the host's proxy for the container `id`, on the host's address on its network and for
  *  its address alone, and gives the browsers its address. */
 const proxyFor = async (id: string, signal: AbortSignal): Promise<Socks> => {
-  const { own, host } = await networkOf(id);
+  const { own, host, settled = '' } = await networkOf(id);
   const socks = await startSocks({ host, peer: own });
   try {
     const address = `socks5://${host}:${String(socks.port)}`;
-    await exec(id, ['sh', '-c', `printf "%s\\n" "$1" > ${PROXY_PIPE}`, 'sh', address], signal);
+    const told = [
+      'sh',
+      '-c',
+      `printf "%s\\n%s\\n" "$1" "$2" > ${PROXY_PIPE}`,
+      'sh',
+      address,
+      settled,
+    ];
+    await exec(id, told, signal);
     return socks;
   } catch (error) {
     await socks.stop();

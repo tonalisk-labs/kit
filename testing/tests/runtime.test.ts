@@ -95,7 +95,7 @@ const apple = await standIn(
   `#!/bin/sh
 case "$1" in
   create) printf '%s\\n' "$@" > '${created}'; echo 'Fetching postgres'; echo 'abc-123' ;;
-  inspect) echo '[{"configuration":{"id":"abc-123","publishedPorts":[{"hostAddress":"127.0.0.1","hostPort":55002,"containerPort":5432,"proto":"tcp","count":1}]},"status":{"state":"running","networks":[{"ipv4Address":"192.168.64.7/24","ipv4Gateway":"192.168.64.1","network":"default"}]}}]' ;;
+  inspect) echo '[{"configuration":{"id":"abc-123","publishedPorts":[{"hostAddress":"127.0.0.1","hostPort":55002,"containerPort":5432,"proto":"tcp","count":1}]},"status":{"state":"running","networks":[{"ipv4Address":"192.168.64.7/24","ipv4Gateway":"192.168.64.1","ipv6Address":"fd9b:2e07::7/64","network":"default"}]}}]' ;;
   list) echo '[{"configuration":{"id":"ours","labels":{"run":"host 7 then"}}},{"configuration":{"id":"theirs","labels":{}}}]' ;;
   *) exit 0 ;;
 esac
@@ -279,17 +279,22 @@ await test('a container’s address is the loopback port its configuration recor
   );
 });
 
-await test('a container’s network is its own address, without its prefix, and its gateway, the host’s there', async () => {
+await test('a container’s network is its own address, without its prefix, its gateway, the host’s there, and the IPv6 address it settles on', async () => {
   const runtime = appleContainerOf({ command: apple, limits: SHORT, expiry: never });
   assert.deepEqual(await runtime.network('abc-123'), {
     own: '192.168.64.7',
     host: '192.168.64.1',
+    settled: 'fd9b:2e07::7',
   });
 });
 
 await test('Docker’s network on Linux is its bridge’s address and gateway; on macOS, whose gateway is in Docker’s machine, refused', async () => {
   const linux = dockerOf({ command: docker, limits: SHORT, expiry: never, platform: 'linux' });
-  assert.deepEqual(await linux.network('abc'), { own: '172.17.0.2', host: '172.17.0.1' });
+  assert.deepEqual(await linux.network('abc'), {
+    own: '172.17.0.2',
+    host: '172.17.0.1',
+    settled: undefined,
+  });
   const mac = dockerOf({ command: docker, limits: SHORT, expiry: never, platform: 'darwin' });
   await assert.rejects(mac.network('abc'), { message: /run with Apple's container/u });
 });

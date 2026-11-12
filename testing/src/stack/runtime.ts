@@ -39,10 +39,12 @@ export interface Address {
 }
 
 /** Where a running container is on its network, and where the host is there: the one address a
- *  host server for the container answers, and the address it listens on. */
+ *  host server for the container answers, and the address it listens on. `settled` is the global
+ *  IPv6 address the network gives it some seconds after it starts, where it gives one. */
 export interface Network {
   readonly own: string;
   readonly host: string;
+  readonly settled?: string | undefined;
 }
 
 /** How long each call may take on a busy machine, in milliseconds: a create may pull its image,
