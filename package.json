@@ -86,10 +86,10 @@
   "dependencies": {
     "@tailwindcss/node": "4.3.3",
     "axe-core": "4.14.0",
-    "lighthouse": "13.5.0",
+    "lighthouse": "13.6.0",
     "oxc-parser": "0.153.0",
     "parse5": "8.0.1",
-    "puppeteer-core": "25.14.0",
+    "puppeteer-core": "25.16.0",
     "robots-parser": "3.0.1",
     "satteri": "0.10.5",
     "sax": "1.6.1",

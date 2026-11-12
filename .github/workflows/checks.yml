@@ -31,6 +31,9 @@ jobs:
           GIT_CONFIG_KEY_1: advice.detachedHead
           GIT_CONFIG_VALUE_1: 'false'
         with:
+          # The whole history: a sitemap dates each page by its sources' last commit, and a shallow
+          # clone gives every page the one commit it holds.
+          fetch-depth: 0
           persist-credentials: false
       # One mise release on every runner, its latest, so each job runs the same task runner.
       - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
