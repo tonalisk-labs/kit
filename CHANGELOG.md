@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.2](https://github.com/tonalisk-labs/kit/compare/v1.0.1...v1.0.2) (2026-11-12)
+
+
+### Bug Fixes
+
+* a site's check and release clone the whole history, with Lighthouse 13.6.0 ([#6](https://github.com/tonalisk-labs/kit/issues/6)) ([137b953](https://github.com/tonalisk-labs/kit/commit/137b9535c5f36e5c1c78b3ddc33e55380fe6f328))
+* **release:** kit's release workflow publishes it to npm itself, with provenance ([710cf3e](https://github.com/tonalisk-labs/kit/commit/710cf3e3b3d74d5c633a6e8410f7d024610e6209))
+* **release:** release-please's pull request passes kit's own check, Cargo.lock included ([#4](https://github.com/tonalisk-labs/kit/issues/4)) ([96b705b](https://github.com/tonalisk-labs/kit/commit/96b705b4ceabbd1fca50af22749008ef97c750c7))
+* **testing:** a Covers header reads its own line only, in linear time ([#3](https://github.com/tonalisk-labs/kit/issues/3)) ([597ea2d](https://github.com/tonalisk-labs/kit/commit/597ea2dd810e2bdd72080245d65e8ea52ad89f2c))
+* **testing:** shared browsers with seats per test, and every hold's wait bounded ([#7](https://github.com/tonalisk-labs/kit/issues/7)) ([5002c9b](https://github.com/tonalisk-labs/kit/commit/5002c9b56db1b20f2d61ce091d62ae7e6d79bc66))
+
 ## 1.0.1 (2026-11-11)
 
 The README fits on one screen, and the rest of it moves to docs/. The GitHub Pages deploy is its
