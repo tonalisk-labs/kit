@@ -19,10 +19,17 @@ zizmor = "1.32.0"
 # whatever package has its name.
 _.path = ["{{config_root}}/node_modules/.bin"]
 
+# What rust-toolchain.toml pins, installed once before any task runs cargo: mise starts those tasks
+# together, and the first cargo in each would download it into the same folder.
+[tasks.toolchain]
+run = "rustup toolchain install --no-self-update"
+
 [tasks.format]
+depends = ["toolchain"]
 run = ["oxfmt --check -c rules/oxfmt.json", "cargo fmt --check", "shfmt --diff ."]
 
 [tasks.lint]
+depends = ["toolchain"]
 run = [
   "oxlint",
   "cargo clippy --all-targets --all-features",
@@ -44,11 +51,12 @@ run = "npm run build"
 description = "The unit tests on their coverage floors; grantOrbit's test starts Postgres in Docker, which must answer"
 # The entry tests load the build, as a consumer does. The crate's tests run under coverage, held
 # to the floors in server/coverage.json.
-depends = ["build"]
+depends = ["build", "toolchain"]
 run = ["npm test", "node testing/src/floors/rust.ts"]
 
 [tasks."mutants:rust"]
 description = "Mutation tests of the limiter and the Stripe client, each file held to its floor in mutants.json; a pull request passes --in-diff <its diff>"
+depends = ["toolchain"]
 run = "node testing/src/floors/mutants.ts"
 
 [tasks.workflows]
