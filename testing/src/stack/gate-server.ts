@@ -73,12 +73,16 @@ export const holdIdOf = (incoming: IncomingMessage): string | undefined => {
   return typeof id === 'string' && id !== '' ? id : undefined;
 };
 
+/** A hold's id as openHold makes it, a random UUID: nothing else names a hold. */
+const HOLD_ID = /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/u;
+
 /** Moves the deadline of the hold `id` names to `given`, epoch milliseconds or none at all, as
- *  its test's timeout moved: 204, or 404 for a hold this process doesn't serve. */
+ *  its test's timeout moved: 204, or 404 for a hold this process doesn't serve. A request names
+ *  only an entry of the table: an id of another shape is looked up nowhere. */
 export const answerDeadline = (outgoing: ServerResponse, id: string, given: string): void => {
-  const renew = renewers.get(id);
-  if (renew === undefined) {
-    outgoing.writeHead(404).end(`no hold ${id} here`);
+  const renew = HOLD_ID.test(id) && renewers.has(id) ? renewers.get(id) : undefined;
+  if (typeof renew !== 'function') {
+    outgoing.writeHead(404).end('no such hold here');
     return;
   }
   renew(deadlineIn(given));

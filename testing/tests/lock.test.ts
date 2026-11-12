@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import { createServer } from 'node:http';
 import { test } from 'node:test';
@@ -322,3 +323,18 @@ await test('a deadline its test moves holds, and a test with no timeout leaves t
     { stall: 1000, clock },
   );
 });
+
+await test('a deadline move names a hold by its id alone: constructor, __proto__ or an unknown id is 404', async () =>
+  withPool(1, async () => {
+    const held = await seatFor('webkit-09 › J5 (worker 1, pid 11)', 5000);
+    const statuses = await Promise.all(
+      ['constructor', '__proto__', 'hasOwnProperty', randomUUID()].map(async (id) => {
+        const answer = await fetch(new URL(`/deadline/${id}/6000`, process.env[HOST_ENV]), {
+          method: 'POST',
+        });
+        return answer.status;
+      }),
+    );
+    assert.deepEqual(statuses, [404, 404, 404, 404]);
+    held();
+  }));
