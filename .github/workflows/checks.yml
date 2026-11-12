@@ -22,7 +22,8 @@ jobs:
       contents: read # to check out the code
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        # Its `git init` names the branch, and it checks out a detached ref on purpose: no advice.
+        # Its `git init` names the branch, and a pull request's merge ref or a release's tag is
+        # detached on purpose: no advice.
         env:
           GIT_CONFIG_COUNT: '2'
           GIT_CONFIG_KEY_0: init.defaultBranch
@@ -30,6 +31,9 @@ jobs:
           GIT_CONFIG_KEY_1: advice.detachedHead
           GIT_CONFIG_VALUE_1: 'false'
         with:
+          # The whole history: a sitemap dates each page by its sources' last commit, and a shallow
+          # clone gives every page the one commit it holds.
+          fetch-depth: 0
           persist-credentials: false
       # One mise release on every runner, its latest, so each job runs the same task runner.
       - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
@@ -39,9 +43,62 @@ jobs:
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - if: hashFiles('package-lock.json') != ''
         run: npm ci
-      # A repo's tests may drive Playwright's browsers, which the runner doesn't carry.
-      - if: hashFiles('node_modules/@playwright/test/package.json') != ''
-        run: npx playwright install --with-deps
+      # Playwright's browsers and their Ubuntu packages come from a cache keyed on the runner image
+      # and Playwright's version: a run that finds it needs neither Ubuntu's mirrors nor the CDN.
+      - id: playwright
+        if: hashFiles('node_modules/@playwright/test/package.json') != ''
+        run: |
+          version=$(node -p "require('@playwright/test/package.json').version")
+          image="$(printenv ImageOS)-$(printenv ImageVersion)"
+          echo "key=playwright-${image}-${RUNNER_ARCH}-${version}" >> "$GITHUB_OUTPUT"
+      - id: playwright-cache
+        if: steps.playwright.outputs.key != ''
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/playwright-apt
+          key: ${{ steps.playwright.outputs.key }}
+      # A miss keeps the packages the browsers lack, as apt resolves them, and the lists it read.
+      - if: steps.playwright.outputs.key != '' && steps.playwright-cache.outputs.cache-hit != 'true'
+        run: |
+          store="$HOME/.cache/playwright-apt"
+          mkdir -p "$store/archives" "$store/lists"
+          # A mirror out of reach fails the run here, in seconds, not package by package later.
+          bounds=(-o Acquire::Retries=1 -o Acquire::http::Timeout=10 -o Acquire::https::Timeout=10)
+          sudo apt-get update --error-on=any "${bounds[@]}"
+          # It exits 1 when it lists packages, as it does on a fresh runner.
+          report=$(npx playwright install-deps --dry-run) ||
+            grep -q '^Missing system dependencies' <<< "$report"
+          sed -n 's/^  //p' <<< "$report" > "$store/packages"
+          if [ -s "$store/packages" ]; then
+            xargs sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+              "${bounds[@]}" --download-only < "$store/packages"
+            cp /var/cache/apt/archives/*.deb "$store/archives/"
+          fi
+          sudo find /var/lib/apt/lists -maxdepth 1 -type f ! -name lock \
+            -exec cp -t "$store/lists" {} +
+          sudo chown -R "$USER" "$store"
+      # apt installs from the kept packages alone, with the lists they came from.
+      - if: steps.playwright.outputs.key != ''
+        run: |
+          store="$HOME/.cache/playwright-apt"
+          if [ -s "$store/packages" ]; then
+            sudo cp "$store/lists/"* /var/lib/apt/lists/
+            sudo cp "$store/archives/"*.deb /var/cache/apt/archives/
+            xargs sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+              --no-download < "$store/packages"
+          fi
+          npx playwright install
+      # Saved after the install, whose browser download finds their packages in: before them, it
+      # warns that the host lacks them.
+      - if: steps.playwright.outputs.key != '' && steps.playwright-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/playwright-apt
+          key: ${{ steps.playwright.outputs.key }}
       - run: mise run check
 
   title:
