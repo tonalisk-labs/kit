@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 // A workspace's tests as `node --test` runs them (its arguments: globs and `--import <module>`),
-// those timing code then alone, one at a time; the rest under coverage, held to its floors.
-// KIT_TEST_PHASE=untimed or timed takes one phase, so the timed run can have the machine alone.
+// those timing code then alone, one at a time, holding the machine's CPU gate whole; the rest
+// under coverage, held to its floors. KIT_TEST_PHASE=untimed or timed takes one phase, so the
+// timed run can have the machine alone.
 import { finished, pipeline } from 'node:stream/promises';
 import { run, type RunOptions } from 'node:test';
 import { spec as SpecReporter } from 'node:test/reporters';
 import { parseArgs } from 'node:util';
 
+import { inWholeTurn } from '../stack/gate-member.ts';
+import { GATE_PORT } from '../stack/gate-server.ts';
 import { holdFloors, type Measured } from './hold.ts';
 import { measuredOnce } from './instances.ts';
 import { PHASE_ENV, phaseOf, testFiles } from './timed.ts';
@@ -60,6 +63,19 @@ const measure = async (): Promise<Measured> => {
 };
 
 const name = process.env['npm_package_name'] ?? cwd;
+
+/** The CPU gate's port: the machine's own, or the one a test of this runner serves. */
+const GATE_PORT_ENV = 'KIT_CPU_GATE_PORT';
+
+/** Runs the timed files one at a time, holding every slot of the machine's CPU gate: the tests of
+ *  other runs, which take their turns there, wait, so none shares the cores they're timed on. */
+const timedPass = async (files: string[]): Promise<boolean> =>
+  inWholeTurn(
+    async () => passes(files, false),
+    `the timed tests of ${name} (pid ${String(process.pid)})`,
+    Number(process.env[GATE_PORT_ENV] ?? GATE_PORT),
+  );
+
 const phase = phaseOf(process.env[PHASE_ENV]);
 const untimed = phase !== 'timed';
 const timedToo = phase !== 'untimed';
@@ -75,5 +91,5 @@ if (!untimed) {
 // A timed test shares no CPU with the others: it runs once they are done, and on its own.
 const passed =
   (!untimed || (await passes(parallel, true))) &&
-  (!timedToo || timed.length === 0 || (await passes(timed, false)));
+  (!timedToo || timed.length === 0 || (await timedPass(timed)));
 process.exitCode = passed && (!untimed || holdFloors(name, cwd, await measure())) ? 0 : 1;

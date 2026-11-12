@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { holdTurn } from '../src/stack/control.ts';
-import { joinGate } from '../src/stack/gate-member.ts';
+import { inWholeTurn, joinGate } from '../src/stack/gate-member.ts';
 import { serveGate } from '../src/stack/gate-server.ts';
 import { freePort } from '../src/stack/ports.ts';
 
@@ -31,4 +31,34 @@ await test('the run and the gate list who holds their turns, by the name each ho
     held();
     run.leave();
   }
+});
+
+await test('a whole turn holds every slot, named, while its work runs, and gives them back after', async () => {
+  const port = await freePort();
+  assert.notEqual(await serveGate(port, 2), undefined);
+  const gate = `http://127.0.0.1:${String(port)}`;
+  const other = await joinGate(port);
+  const ran: string[] = [];
+  const later: { turn?: Promise<() => void> } = {};
+  await inWholeTurn(
+    async () => {
+      ran.push('work');
+      later.turn = holdTurn(other.turns).then((release) => {
+        ran.push('a later turn');
+        return release;
+      });
+      assert.match(
+        await holdersAt(gate),
+        /"what":"2 of the CPU gate's slots for run [^"]+","who":"the timed tests","since":\d+,"held":true/u,
+      );
+      ran.push('work done');
+    },
+    'the timed tests',
+    port,
+  );
+  const { turn } = later;
+  assert.ok(turn !== undefined, 'the later turn was asked for');
+  (await turn)();
+  other.leave();
+  assert.deepEqual(ran, ['work', 'work done', 'a later turn']);
 });

@@ -2,8 +2,9 @@ import { request } from 'node:http';
 
 import { test } from '@playwright/test';
 
+import { holdCpuTurn } from './gate-member.ts';
 import { WHOLE } from './gate-server.ts';
-import { type HoldKind, openHold } from './hold.ts';
+import { openHold } from './hold.ts';
 
 /** The variable naming the stack host, set by the global setup for every worker. */
 export const HOST_ENV = 'KIT_STACK_HOST';
@@ -156,15 +157,9 @@ export const holdBrowserSeat = async (contexts: number): Promise<() => void> =>
 
 const runTurns = (): string => required(CPU_GATE_ENV, 'the global setup joins the CPU gate');
 
-const TURN: HoldKind = {
-  held: 'a CPU turn',
-  refused: (status) =>
-    `the CPU gate refused a turn (${String(status)}): the run has left it, or lost it`,
-};
-
 /** A CPU turn, until the returned release; an abort gives up a turn still waiting. */
 export const holdTurn = async (turns: string, signal?: AbortSignal): Promise<() => void> =>
-  openHold(new URL(turns), TURN, { signal, who: holderName(), deadline: holderDeadline() });
+  holdCpuTurn(turns, { signal, who: holderName(), deadline: holderDeadline() });
 
 /** A test's CPU turn: its release, its widening once claimed, and the test's end, which gives up
  *  a widening still waiting, so no every-slot turn is granted after its test. */

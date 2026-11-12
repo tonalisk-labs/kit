@@ -312,3 +312,42 @@ export const joinGate = async (
     },
   };
 };
+
+/** What a CPU turn is called, and what a refusal of one says. */
+const TURN: HoldKind = {
+  held: 'a CPU turn',
+  refused: (status) =>
+    `the CPU gate refused a turn (${String(status)}): the run has left it, or lost it`,
+};
+
+/** A CPU turn at `turns` (a run's, or with `/whole`, every slot), until the returned release; an
+ *  abort gives up a turn still waiting. */
+export const holdCpuTurn = async (
+  turns: string,
+  asking: {
+    readonly signal?: AbortSignal | undefined;
+    readonly who: string;
+    readonly deadline?: number | undefined;
+  },
+): Promise<() => void> => openHold(new URL(turns), TURN, asking);
+
+/** Runs `work` holding every slot of the machine's CPU gate on `port`, joined for it alone: no
+ *  other run's tests share the cores while it runs, for figures their work would skew. The wait
+ *  for the slots is the gate's queue, first come, first served. */
+export const inWholeTurn = async <Value>(
+  work: () => Promise<Value>,
+  who: string,
+  port = GATE_PORT,
+): Promise<Value> => {
+  const gate = await joinGate(port);
+  try {
+    const release = await holdCpuTurn(`${gate.turns}/${WHOLE}`, { who });
+    try {
+      return await work();
+    } finally {
+      release();
+    }
+  } finally {
+    gate.leave();
+  }
+};
