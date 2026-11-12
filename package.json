@@ -1,6 +1,6 @@
 {
   "name": "@tonalisk-labs/kit",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "The shared base of the tonalisk-labs sites: the E2E harness, the theme, and the rules every repo extends.",
   "keywords": [
     "astro",
