@@ -69,7 +69,13 @@ const startHost = async (): Promise<{
 /** Runs the repo's suite against the host at `origin`: its exit code and what it printed. */
 const ran = async (repo: string, origin: string): Promise<{ code: number; report: string }> =>
   new Promise((resolve) => {
-    const env = Object.assign(structuredClone(process.env), { [HOST_ENV]: origin });
+    // The child's coverage goes to a folder of its own, not the run's, which counted kit's files
+    // as its Playwright loader read them and its workers ran them: lost where a worker exits before
+    // it writes, as on Linux CI. Node gives every child the run's folder unless it names another.
+    const env = Object.assign(structuredClone(process.env), {
+      [HOST_ENV]: origin,
+      NODE_V8_COVERAGE: path.join(repo, 'coverage'),
+    });
     execFile(process.execPath, [CLI, 'test'], { cwd: repo, env }, (error, stdout, stderr) => {
       resolve({ code: error === null ? 0 : Number(error.code), report: `${stdout}${stderr}` });
     });
