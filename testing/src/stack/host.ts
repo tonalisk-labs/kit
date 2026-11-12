@@ -12,7 +12,14 @@ import {
   STACK_ENV,
 } from './control.ts';
 import { joinGate, type Membership } from './gate-member.ts';
-import { answerHolders, holderOf, holdOpen } from './gate-server.ts';
+import {
+  answerDeadline,
+  answerHolders,
+  deadlineOf,
+  holderOf,
+  holdIdOf,
+  holdOpen,
+} from './gate-server.ts';
 import { seatPool, stackLocks } from './lock.ts';
 import type { Service } from './process.ts';
 import { startTarget } from './stack.ts';
@@ -105,13 +112,21 @@ interface Hosted {
 const handle =
   (hosted: Hosted) =>
   (incoming: IncomingMessage, outgoing: ServerResponse): void => {
-    const [, action = '', key = ''] = (incoming.url ?? '').split('/');
+    const [, action = '', key = '', given = ''] = (incoming.url ?? '').split('/');
     if (action === 'holders') {
       answerHolders(outgoing);
       return;
     }
+    if (action === 'deadline') {
+      answerDeadline(outgoing, key, given);
+      return;
+    }
     if (action === 'browser') {
-      browsers(outgoing, key, holderOf(incoming));
+      browsers(outgoing, key, {
+        who: holderOf(incoming),
+        deadline: deadlineOf(incoming),
+        id: holdIdOf(incoming),
+      });
       return;
     }
     if (action === 'share' || action === 'own') {
@@ -123,6 +138,9 @@ const handle =
         },
         what: `a ${action} hold on ${stack}`,
         who: holderOf(incoming),
+        deadline: deadlineOf(incoming),
+        watch: locks.watch(stack),
+        id: holdIdOf(incoming),
       });
       return;
     }

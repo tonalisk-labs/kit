@@ -25,12 +25,14 @@ import { deviceBudget, endpointOf } from './stack/browsers.ts';
 import {
   holdBrowserSeat,
   holdStack,
+  deadlineFrom,
   holdTestTurn,
   HOST_ENV,
   LINUX_ENV,
   MEASURE_ENV,
   STACK_ENV,
 } from './stack/control.ts';
+import { announceDeadline } from './stack/hold.ts';
 import { claimPort } from './stack/ports.ts';
 import type { Coordinates } from './stack/stack.ts';
 import { browserTrust, trustCa } from './stack/tls.ts';
@@ -62,7 +64,42 @@ interface StackWorkerFixtures {
 interface StackFixtures {
   /** Whether this test owns the stack alone (`@exclusive`), or shares it with every other. */
   readonly stackHold: boolean;
+  /** The test's deadline following its timeout to the servers of its holds. */
+  readonly deadlines: boolean;
 }
+
+/** The last move of a deadline on its way, so the next follows it and the servers hear them in
+ *  the order the test made them. */
+const announcing = { last: Promise.resolve(true) };
+
+/** Tells the servers of the running test's holds its deadline, as its timeout now stands; a server
+ *  that can't be told keeps the deadline it had. */
+const announceTimeout = (timeout: number): void => {
+  const deadline = deadlineFrom(timeout);
+  announcing.last = announcing.last.then(async () =>
+    announceDeadline(deadline).then(
+      () => true,
+      () => false,
+    ),
+  );
+};
+
+/** `type.slow()` moves the running test's deadline with its timeout, as `testInfo.slow()` does: it
+ *  triples the timeout without `setTimeout`, so a hold's deadline would stay a third of it. */
+const followingSlow = <Type extends object>(type: Type): Type => {
+  const slow: unknown = Reflect.get(type, 'slow');
+  if (typeof slow === 'function') {
+    Reflect.set(type, 'slow', (...args: unknown[]): void => {
+      Reflect.apply(slow, type, args);
+      try {
+        announceTimeout(base.info().timeout);
+      } catch {
+        // Called while the file loads, for every test in it: no test runs, so none holds anything.
+      }
+    });
+  }
+  return type;
+};
 
 interface WorkerFixtures {
   /** Chromium's DevTools port, which Lighthouse connects to; no other engine has one. */
@@ -126,43 +163,65 @@ type BaseWorker = PlaywrightWorkerArgs & PlaywrightWorkerOptions;
 export const apiTest: TestType<
   BaseTest & StackFixtures,
   BaseWorker & Options & StackWorkerFixtures
-> = base.extend<StackFixtures, Options & StackWorkerFixtures>({
-  site: ['', { option: true, scope: 'worker' }],
-  browserContexts: [1, { option: true, scope: 'worker' }],
-  row: [undefined, { option: true, scope: 'worker' }],
-  visual: [false, { option: true, scope: 'worker' }],
-  stack: [
-    async ({ site }, provide): Promise<void> => {
-      const handoff = process.env[STACK_ENV];
-      const parsed: unknown = handoff === undefined ? undefined : JSON.parse(handoff);
-      if (!isCoordinates(parsed)) {
-        throw new Error(`${site} has no running stack: its setup project starts one`);
-      }
-      // Node's own clients (fetch, WebSocket) reach the edge over TLS too.
-      trustCa(parsed.trust.ca);
-      await provide(parsed);
-    },
-    { scope: 'worker' },
-  ],
-  stackHold: [
-    async ({ site }, provide, testInfo): Promise<void> => {
-      const owns = testInfo.tags.includes(EXCLUSIVE);
-      if (site === '' || process.env[HOST_ENV] === undefined) {
-        await provide(owns);
-        return;
-      }
-      const release = await holdStack(owns ? 'own' : 'share', site);
-      try {
-        await provide(owns);
-      } finally {
-        release();
-      }
-    },
-    // Unbounded, and out of the test's own time: the grant always comes, as each holder is a test
-    // under its own timeout, whose end gives the hold back.
-    { auto: true, timeout: 0 },
-  ],
-});
+> = followingSlow(
+  base.extend<StackFixtures, Options & StackWorkerFixtures>({
+    /** A test sets its timeout as it starts, past the holds its fixtures took, or makes itself slow:
+     *  each change moves the deadline its holds' servers bound their waits by (stack/stall.ts). */
+    deadlines: [
+      async ({ site: _site }, provide, testInfo): Promise<void> => {
+        const set = testInfo.setTimeout.bind(testInfo);
+        const slow = testInfo.slow.bind(testInfo);
+        Object.assign(testInfo, {
+          setTimeout: (timeout: number): void => {
+            set(timeout);
+            announceTimeout(testInfo.timeout);
+          },
+          slow: (...args: Parameters<typeof slow>): void => {
+            slow(...args);
+            announceTimeout(testInfo.timeout);
+          },
+        });
+        await provide(true);
+      },
+      { auto: true },
+    ],
+    site: ['', { option: true, scope: 'worker' }],
+    browserContexts: [1, { option: true, scope: 'worker' }],
+    row: [undefined, { option: true, scope: 'worker' }],
+    visual: [false, { option: true, scope: 'worker' }],
+    stack: [
+      async ({ site }, provide): Promise<void> => {
+        const handoff = process.env[STACK_ENV];
+        const parsed: unknown = handoff === undefined ? undefined : JSON.parse(handoff);
+        if (!isCoordinates(parsed)) {
+          throw new Error(`${site} has no running stack: its setup project starts one`);
+        }
+        // Node's own clients (fetch, WebSocket) reach the edge over TLS too.
+        trustCa(parsed.trust.ca);
+        await provide(parsed);
+      },
+      { scope: 'worker' },
+    ],
+    stackHold: [
+      async ({ site }, provide, testInfo): Promise<void> => {
+        const owns = testInfo.tags.includes(EXCLUSIVE);
+        if (site === '' || process.env[HOST_ENV] === undefined) {
+          await provide(owns);
+          return;
+        }
+        const release = await holdStack(owns ? 'own' : 'share', site);
+        try {
+          await provide(owns);
+        } finally {
+          release();
+        }
+      },
+      // Unbounded, and out of the test's own time: the grant always comes, as each holder is a test
+      // under its own timeout, whose end gives the hold back.
+      { auto: true, timeout: 0 },
+    ],
+  }),
+);
 
 /** A browser the Linux image's server runs, where the stack host started one. */
 const servedByImage = (browserName: string, visual: boolean): boolean =>
@@ -172,172 +231,179 @@ const servedByImage = (browserName: string, visual: boolean): boolean =>
 export const test: TestType<
   BaseTest & StackFixtures & TestFixtures,
   BaseWorker & Options & StackWorkerFixtures & WorkerFixtures
-> = apiTest.extend<TestFixtures, WorkerFixtures>({
-  cdpPort: [
-    async ({ browserName, visual }, provide): Promise<void> => {
-      // The visual projects' Chromium runs in the container, its DevTools port out of reach.
-      const claim = browserName === 'chromium' && !visual ? await claimPort() : undefined;
-      await provide(claim === undefined ? undefined : claim.port);
-      if (claim !== undefined) {
-        await claim.stop();
-      }
+> = followingSlow(
+  apiTest.extend<TestFixtures, WorkerFixtures>({
+    cdpPort: [
+      async ({ browserName, visual }, provide): Promise<void> => {
+        // The visual projects' Chromium runs in the container, its DevTools port out of reach.
+        const claim = browserName === 'chromium' && !visual ? await claimPort() : undefined;
+        await provide(claim === undefined ? undefined : claim.port);
+        if (claim !== undefined) {
+          await claim.stop();
+        }
+      },
+      { scope: 'worker' },
+    ],
+    /**
+     * WebKit on macOS, and every visual project's browser, is Playwright's own Linux build in the
+     * container the stack host starts; baselines match only the architecture that drew them.
+     */
+    connectOptions: [
+      async ({ browserName, visual }, provide): Promise<void> => {
+        if (visual && arch() !== BASELINE_ARCH) {
+          throw new Error(
+            `The baselines were drawn on ${BASELINE_ARCH} and this machine is ${arch()}: its Linux image renders differently, so the visual projects run on ${BASELINE_ARCH} alone`,
+          );
+        }
+        const remote = visual || browserName === 'webkit';
+        const wsEndpoint = remote ? endpointOf(browserName, process.env[LINUX_ENV]) : undefined;
+        if (remote && (visual || platform() === 'darwin') && wsEndpoint === undefined) {
+          throw new Error(
+            'WebKit on macOS and the visual projects run only in the Linux image: its setup project starts it',
+          );
+        }
+        // The image's browser reaches the host's loopback through the host's proxy (stack/socks.ts).
+        await provide(wsEndpoint === undefined ? undefined : { wsEndpoint });
+      },
+      { scope: 'worker' },
+    ],
+    /** The browser trusts the edge as every other harness browser does (browserTrust). */
+    launchOptions: [
+      async ({ launchOptions, cdpPort, browserName, stack }, provide): Promise<void> => {
+        const debugging =
+          cdpPort === undefined ? [] : [`--remote-debugging-port=${String(cdpPort)}`];
+        const trusting = browserTrust(stack.trust, browserName).args;
+        const args = [...(launchOptions.args ?? []), ...debugging, ...trusting];
+        await provide(Object.assign(structuredClone(launchOptions), { args }));
+      },
+      { scope: 'worker' },
+    ],
+    ignoreHTTPSErrors: async ({ browserName, connectOptions, stack }, provide): Promise<void> => {
+      const contained = connectOptions !== undefined;
+      await provide(browserTrust(stack.trust, browserName, contained).ignoreHTTPSErrors);
     },
-    { scope: 'worker' },
-  ],
-  /**
-   * WebKit on macOS, and every visual project's browser, is Playwright's own Linux build in the
-   * container the stack host starts; baselines match only the architecture that drew them.
-   */
-  connectOptions: [
-    async ({ browserName, visual }, provide): Promise<void> => {
-      if (visual && arch() !== BASELINE_ARCH) {
-        throw new Error(
-          `The baselines were drawn on ${BASELINE_ARCH} and this machine is ${arch()}: its Linux image renders differently, so the visual projects run on ${BASELINE_ARCH} alone`,
+    baseURL: async ({ stack }, provide): Promise<void> => {
+      await provide(stack.baseURL);
+    },
+    /** The test's context, made once its stack hold, seats and CPU turn are held; named to the edge. */
+    context: async ({ cpuTurn: _turn, context, row, stack }, provide, testInfo): Promise<void> => {
+      if (testInfo.tags.includes(API)) {
+        throw new Error(`an ${API} test makes no page: it is written with apiTest`);
+      }
+      await joinEdge(context, stack.baseURL, row === undefined ? 'wired' : row.network);
+      await provide(context);
+    },
+    devices: async (
+      { context: _context, browser, browserContexts, ignoreHTTPSErrors, row, stack, visual },
+      provide,
+    ): Promise<void> => {
+      const opened: BrowserContext[] = [];
+      const reserve = deviceBudget(browserContexts);
+      const newDevice = async (options: BrowserContextOptions = {}): Promise<Page> => {
+        const giveBack = reserve();
+        const settings = Object.assign(
+          structuredClone(options),
+          {
+            baseURL: options.baseURL ?? stack.baseURL,
+            ignoreHTTPSErrors: options.ignoreHTTPSErrors ?? ignoreHTTPSErrors,
+          },
+          visual && !('reducedMotion' in options) ? { reducedMotion: VISUAL_MOTION } : {},
         );
-      }
-      const remote = visual || browserName === 'webkit';
-      const wsEndpoint = remote ? endpointOf(browserName, process.env[LINUX_ENV]) : undefined;
-      if (remote && (visual || platform() === 'darwin') && wsEndpoint === undefined) {
-        throw new Error(
-          'WebKit on macOS and the visual projects run only in the Linux image: its setup project starts it',
-        );
-      }
-      // The image's browser reaches the host's loopback through the host's proxy (stack/socks.ts).
-      await provide(wsEndpoint === undefined ? undefined : { wsEndpoint });
-    },
-    { scope: 'worker' },
-  ],
-  /** The browser trusts the edge as every other harness browser does (browserTrust). */
-  launchOptions: [
-    async ({ launchOptions, cdpPort, browserName, stack }, provide): Promise<void> => {
-      const debugging = cdpPort === undefined ? [] : [`--remote-debugging-port=${String(cdpPort)}`];
-      const trusting = browserTrust(stack.trust, browserName).args;
-      const args = [...(launchOptions.args ?? []), ...debugging, ...trusting];
-      await provide(Object.assign(structuredClone(launchOptions), { args }));
-    },
-    { scope: 'worker' },
-  ],
-  ignoreHTTPSErrors: async ({ browserName, connectOptions, stack }, provide): Promise<void> => {
-    const contained = connectOptions !== undefined;
-    await provide(browserTrust(stack.trust, browserName, contained).ignoreHTTPSErrors);
-  },
-  baseURL: async ({ stack }, provide): Promise<void> => {
-    await provide(stack.baseURL);
-  },
-  /** The test's context, made once its stack hold, seats and CPU turn are held; named to the edge. */
-  context: async ({ cpuTurn: _turn, context, row, stack }, provide, testInfo): Promise<void> => {
-    if (testInfo.tags.includes(API)) {
-      throw new Error(`an ${API} test makes no page: it is written with apiTest`);
-    }
-    await joinEdge(context, stack.baseURL, row === undefined ? 'wired' : row.network);
-    await provide(context);
-  },
-  devices: async (
-    { context: _context, browser, browserContexts, ignoreHTTPSErrors, row, stack, visual },
-    provide,
-  ): Promise<void> => {
-    const opened: BrowserContext[] = [];
-    const reserve = deviceBudget(browserContexts);
-    const newDevice = async (options: BrowserContextOptions = {}): Promise<Page> => {
-      const giveBack = reserve();
-      const settings = Object.assign(
-        structuredClone(options),
-        {
-          baseURL: options.baseURL ?? stack.baseURL,
-          ignoreHTTPSErrors: options.ignoreHTTPSErrors ?? ignoreHTTPSErrors,
-        },
-        visual && !('reducedMotion' in options) ? { reducedMotion: VISUAL_MOTION } : {},
-      );
-      const device = await browser.newContext(settings).catch((error: unknown) => {
-        giveBack();
-        throw error;
-      });
-      opened.push(device);
-      device.once('close', giveBack);
-      await joinEdge(device, stack.baseURL, row === undefined ? 'wired' : row.network);
-      return device.newPage();
-    };
-    try {
-      await provide({ newDevice });
-    } finally {
-      await Promise.all(opened.map(async (device) => device.close()));
-    }
-  },
-  /** Measures every document, and slows the CPU on Chromium's low tier (DevTools protocol). */
-  page: async ({ page, row, browserName, stack }, provide): Promise<void> => {
-    await installVitals(page, stack.apiPrefix);
-    const rate = slowdownOf(row, browserName);
-    if (rate > 1) {
-      const session = await page.context().newCDPSession(page);
-      await session.send('Emulation.setCPUThrottlingRate', { rate });
-    }
-    await provide(page);
-  },
-  channels: [{}, { option: true }],
-  reconnect: [undefined, { option: true }],
-  keyboardOnly: [false, { option: true }],
-  /** Taken after the stack hold, so every holder is a test with its stack, and before the CPU
-   *  turn, which a holder may wait on: a test waiting for seats holds no turn. The wait is not the
-   *  test's, and fails should the seats stand still (stack/lock.ts). */
-  browserSeat: [
-    async ({ stackHold: _held, browserName, browserContexts, visual }, provide): Promise<void> => {
-      if (!servedByImage(browserName, visual) || process.env[HOST_ENV] === undefined) {
-        await provide(false);
-        return;
-      }
-      const release = await holdBrowserSeat(browserContexts);
+        const device = await browser.newContext(settings).catch((error: unknown) => {
+          giveBack();
+          throw error;
+        });
+        opened.push(device);
+        device.once('close', giveBack);
+        await joinEdge(device, stack.baseURL, row === undefined ? 'wired' : row.network);
+        return device.newPage();
+      };
       try {
-        await provide(true);
+        await provide({ newDevice });
       } finally {
-        release();
+        await Promise.all(opened.map(async (device) => device.close()));
       }
     },
-    { timeout: 0 },
-  ],
-  /** A CPU turn, taken last as every turn is, spans the test's own work; its wait is not the
-   *  test's. */
-  cpuTurn: [
-    async ({ browserSeat: _seated }, provide): Promise<void> => {
-      const release = await holdTestTurn();
-      try {
-        await provide(true);
-      } finally {
-        release();
+    /** Measures every document, and slows the CPU on Chromium's low tier (DevTools protocol). */
+    page: async ({ page, row, browserName, stack }, provide): Promise<void> => {
+      await installVitals(page, stack.apiPrefix);
+      const rate = slowdownOf(row, browserName);
+      if (rate > 1) {
+        const session = await page.context().newCDPSession(page);
+        await session.send('Emulation.setCPUThrottlingRate', { rate });
       }
+      await provide(page);
     },
-    { auto: true, timeout: 0 },
-  ],
-  meter: [
-    async ({ page, stack, channels, reconnect }, provide): Promise<void> => {
-      const options = { apiPrefix: stack.apiPrefix, channels, vitals: false, reconnect };
-      const meter = process.env[MEASURE_ENV] === '1' ? await startMeter(page, options) : undefined;
-      await provide(meter);
-      if (meter !== undefined) {
-        meter.traffic.stop();
-      }
-    },
-    { auto: true },
-  ],
-  /** The report is waited for by an event on its folder, within a bound of its own, outside the
-   *  test's time: macOS writes it some seconds after the crash. */
-  browserCrash: [browserWatch(), { auto: true, timeout: REPORT_WAIT_MS + 30_000 }],
-  invariants: [
-    async ({ page, stack, keyboardOnly, browserName }, provide, testInfo): Promise<void> => {
-      const { origin } = new URL(stack.baseURL);
-      const { apiPrefix, notices, cspExceptions } = stack;
-      const today = new Date().toISOString().slice(0, 10);
-      const exceptions = { list: cspExceptions ?? [], engine: browserName, today };
-      const watched = await watch(page, { origin, apiPrefix, notices, keyboardOnly, exceptions });
-      await provide(watched);
-      const problems = await watched.take();
-      if (testInfo.status !== testInfo.expectedStatus) {
-        const body = failureReport(page, problems, watched.recentApi());
-        await testInfo.attach(FAILURE_ATTACHMENT, { body, contentType: 'text/plain' });
-      }
-      expect(problems, 'the page held every invariant').toEqual([]);
-    },
-    { auto: true },
-  ],
-});
+    channels: [{}, { option: true }],
+    reconnect: [undefined, { option: true }],
+    keyboardOnly: [false, { option: true }],
+    /** Taken after the stack hold, so every holder is a test with its stack, and before the CPU
+     *  turn, which a holder may wait on: a test waiting for seats holds no turn. The wait is not the
+     *  test's, and fails should the seats stand still (stack/lock.ts). */
+    browserSeat: [
+      async (
+        { stackHold: _held, browserName, browserContexts, visual },
+        provide,
+      ): Promise<void> => {
+        if (!servedByImage(browserName, visual) || process.env[HOST_ENV] === undefined) {
+          await provide(false);
+          return;
+        }
+        const release = await holdBrowserSeat(browserContexts);
+        try {
+          await provide(true);
+        } finally {
+          release();
+        }
+      },
+      { timeout: 0 },
+    ],
+    /** A CPU turn, taken last as every turn is, spans the test's own work; its wait is not the
+     *  test's. */
+    cpuTurn: [
+      async ({ browserSeat: _seated }, provide): Promise<void> => {
+        const release = await holdTestTurn();
+        try {
+          await provide(true);
+        } finally {
+          release();
+        }
+      },
+      { auto: true, timeout: 0 },
+    ],
+    meter: [
+      async ({ page, stack, channels, reconnect }, provide): Promise<void> => {
+        const options = { apiPrefix: stack.apiPrefix, channels, vitals: false, reconnect };
+        const meter =
+          process.env[MEASURE_ENV] === '1' ? await startMeter(page, options) : undefined;
+        await provide(meter);
+        if (meter !== undefined) {
+          meter.traffic.stop();
+        }
+      },
+      { auto: true },
+    ],
+    /** The report is waited for by an event on its folder, within a bound of its own, outside the
+     *  test's time: macOS writes it some seconds after the crash. */
+    browserCrash: [browserWatch(), { auto: true, timeout: REPORT_WAIT_MS + 30_000 }],
+    invariants: [
+      async ({ page, stack, keyboardOnly, browserName }, provide, testInfo): Promise<void> => {
+        const { origin } = new URL(stack.baseURL);
+        const { apiPrefix, notices, cspExceptions } = stack;
+        const today = new Date().toISOString().slice(0, 10);
+        const exceptions = { list: cspExceptions ?? [], engine: browserName, today };
+        const watched = await watch(page, { origin, apiPrefix, notices, keyboardOnly, exceptions });
+        await provide(watched);
+        const problems = await watched.take();
+        if (testInfo.status !== testInfo.expectedStatus) {
+          const body = failureReport(page, problems, watched.recentApi());
+          await testInfo.attach(FAILURE_ATTACHMENT, { body, contentType: 'text/plain' });
+        }
+        expect(problems, 'the page held every invariant').toEqual([]);
+      },
+      { auto: true },
+    ],
+  }),
+);
 
 export { expect } from '@playwright/test';

@@ -66,6 +66,20 @@ export const control = async (action: Action, key: string): Promise<Record<strin
   return promise;
 };
 
+/** When the running test must end at the latest, its whole timeout from now: none outside a test,
+ *  or for a test with no timeout. A hold's server lets a stillness pass while its holders are
+ *  inside their deadlines; the test moves them as its timeout moves (fixtures.ts). */
+export const deadlineFrom = (timeout: number): number | undefined =>
+  timeout > 0 ? Date.now() + timeout : undefined;
+
+const holderDeadline = (): number | undefined => {
+  try {
+    return deadlineFrom(test.info().timeout);
+  } catch {
+    return undefined;
+  }
+};
+
 /** Who asks for a hold, for its server's holder record: the running test, if any, its worker and
  *  its process, so a wait past its bound names who held what. */
 const holderName = (): string => {
@@ -93,7 +107,7 @@ export const holdStack = async (hold: 'share' | 'own', key: string): Promise<() 
       held: `a ${hold} hold on ${key}`,
       refused: () => `the stack host refused a ${hold} hold on ${key}`,
     },
-    { who: holderName() },
+    { who: holderName(), deadline: holderDeadline() },
   );
 
 /** A seat among the Linux image's browsers for each context the test may have open at once, all
@@ -111,7 +125,7 @@ export const holdBrowserSeat = async (contexts: number): Promise<() => void> =>
           ? `the Linux browsers seat fewer than the ${String(contexts)} browserContexts declared`
           : 'the stack host refused seats among the Linux browsers',
     },
-    { who: holderName() },
+    { who: holderName(), deadline: holderDeadline() },
   );
 
 const runTurns = (): string => required(CPU_GATE_ENV, 'the global setup joins the CPU gate');
@@ -124,7 +138,7 @@ const TURN: HoldKind = {
 
 /** A CPU turn, until the returned release; an abort gives up a turn still waiting. */
 export const holdTurn = async (turns: string, signal?: AbortSignal): Promise<() => void> =>
-  openHold(new URL(turns), TURN, { signal, who: holderName() });
+  openHold(new URL(turns), TURN, { signal, who: holderName(), deadline: holderDeadline() });
 
 /** A test's CPU turn: its release, its widening once claimed, and the test's end, which gives up
  *  a widening still waiting, so no every-slot turn is granted after its test. */

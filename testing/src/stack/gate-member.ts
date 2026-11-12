@@ -11,12 +11,15 @@ import {
 } from 'node:http';
 
 import {
+  answerDeadline,
   answerHolders,
   GATE_MARK,
   GATE_PORT,
   GATE_SCRIPT,
   GATE_VERSION,
+  deadlineOf,
   holderOf,
+  holdIdOf,
   holdOpen,
   LAUNCH,
   SERVES,
@@ -185,7 +188,13 @@ const notYet = (error: unknown): boolean => isAbsent(error) || statusOf(error) =
  *  can't give it. One the gate ends cuts the holder's off, or ends it whole once the run let go. */
 const turnAtGate = async (
   held: Held,
-  asked: { readonly whole: boolean; readonly holder: ServerResponse; readonly who: string },
+  asked: {
+    readonly whole: boolean;
+    readonly holder: ServerResponse;
+    readonly who: string;
+    readonly deadline: number | undefined;
+    readonly id: string | undefined;
+  },
   gone: AbortSignal,
 ): Promise<() => void> => {
   const { promise: changed } = held.changed;
@@ -203,7 +212,8 @@ const turnAtGate = async (
     },
   };
   try {
-    return await openHold(url, kind, { signal: gone, who: asked.who });
+    const { who, deadline, id } = asked;
+    return await openHold(url, kind, { signal: gone, who, deadline, id });
   } catch (error) {
     if (held.left || !notYet(error)) {
       throw held.left ? new Error('the run has left the CPU gate', { cause: held.reason }) : error;
@@ -213,16 +223,41 @@ const turnAtGate = async (
   }
 };
 
+/** A turn's moved deadline, passed on to the gate the turn is held at, which a gate too old to
+ *  know the route refuses: the turn keeps the deadline it was asked with. */
+const passDeadline = (port: number, path: string): void => {
+  const call = request(`http://127.0.0.1:${String(port)}${path}`, { method: 'POST' }, (answer) => {
+    answer.resume();
+  });
+  call.once('error', () => {
+    // A gate gone: there is no turn there to move.
+  });
+  call.end();
+};
+
 /** Serves the run's turns to its holders, in this process or its workers, at a local URL; the
  *  server lets the process end, and stops taking turns as the run leaves. */
 const serveTurns = async (held: Held): Promise<Server> => {
   const server = createServer({ requestTimeout: 0 }, (incoming, holder) => {
     incoming.resume();
-    if (incoming.url === '/holders') {
+    const path = incoming.url ?? '';
+    if (path === '/holders') {
       answerHolders(holder);
       return;
     }
-    const asked = { whole: incoming.url === `/cpu/${WHOLE}`, holder, who: holderOf(incoming) };
+    if (path.startsWith('/deadline/')) {
+      const parts = path.split('/');
+      answerDeadline(holder, parts[2] ?? '', parts[3] ?? '');
+      passDeadline(held.port, path);
+      return;
+    }
+    const asked = {
+      whole: path === `/cpu/${WHOLE}`,
+      holder,
+      who: holderOf(incoming),
+      deadline: deadlineOf(incoming),
+      id: holdIdOf(incoming),
+    };
     const turn = { release: (): void => undefined };
     holdOpen(holder, {
       take: async (gone) => {
@@ -233,6 +268,8 @@ const serveTurns = async (held: Held): Promise<Server> => {
       },
       what: asked.whole ? 'every CPU slot' : 'a CPU turn',
       who: asked.who,
+      deadline: asked.deadline,
+      id: asked.id,
     });
   });
   server.listen(0, '127.0.0.1');

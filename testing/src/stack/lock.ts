@@ -3,6 +3,13 @@ import type { ServerResponse } from 'node:http';
 import { holdingsNamed, holdOpen, semaphore } from './gate-server.ts';
 import { STILLNESS, type Stillness, type Watch, watchOf } from './stall.ts';
 
+/** Who asks for a hold, by when their test must end, and the id its request gave. */
+export interface Holder {
+  readonly who: string;
+  readonly deadline: number | undefined;
+  readonly id: string | undefined;
+}
+
 /** Who holds a target's stack: many tests share it, one that disturbs it owns it alone. */
 export type Hold = 'share' | 'own';
 
@@ -88,6 +95,8 @@ export const stackLocks = (
 ): {
   readonly take: (key: string, hold: Hold, gone: AbortSignal) => Promise<void>;
   readonly give: (key: string, hold: Hold) => void;
+  /** The watch over a stack's waits, which a server counts each holder in. */
+  readonly watch: (key: string) => Watch;
 } => {
   const stacks = new Map<string, Stack>();
   const stackOf = (key: string): Stack => {
@@ -105,6 +114,7 @@ export const stackLocks = (
     give: (key, hold) => {
       give(stackOf(key), hold);
     },
+    watch: (key) => stackOf(key).watch,
   };
 };
 
@@ -114,9 +124,9 @@ export const stackLocks = (
 export const seatPool = (
   size: number,
   stillness: Stillness = STILLNESS,
-): ((outgoing: ServerResponse, asked: string, who: string) => void) => {
+): ((outgoing: ServerResponse, asked: string, holder: Holder) => void) => {
   const pool = semaphore(size, { stillness, what: 'no seat' });
-  return (outgoing, asked, who) => {
+  return (outgoing, asked, { who, deadline, id }) => {
     const count = Number(asked);
     if (!Number.isInteger(count) || count < 1 || count > size) {
       outgoing.writeHead(400).end(`the pool seats 1 to ${String(size)} at once, not ${asked}`);
@@ -129,6 +139,9 @@ export const seatPool = (
       },
       what: `${String(count)} of the Linux browsers' ${String(size)} seats`,
       who,
+      deadline,
+      watch: pool.watch,
+      id,
     });
   };
 };

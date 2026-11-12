@@ -5,8 +5,8 @@ import { once } from 'node:events';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { availableParallelism } from 'node:os';
 
-import { described, HOLDER_HEADER } from './hold.ts';
-import { STILLNESS, type Stillness, type Watch, watchOf } from './stall.ts';
+import { DEADLINE_HEADER, described, HOLD_ID_HEADER, HOLDER_HEADER } from './hold.ts';
+import { type Held, STILLNESS, type Stillness, type Watch, watchOf } from './stall.ts';
 
 /** The fixed local port the machine's one CPU gate listens on: every run finds it there. */
 export const GATE_PORT = 47_391;
@@ -29,10 +29,12 @@ export const SLOTS = availableParallelism();
 /** The last segment of a turn's path that asks for every slot: a measurement load would skew. */
 export const WHOLE = 'whole';
 
-/** A hold this process serves, held or waited for, by whom and since when (epoch ms). */
+/** A hold this process serves, held or waited for, by whom, since when and by when its test must
+ *  end (epoch ms). */
 interface Holding {
   readonly what: string;
   readonly who: string;
+  deadline: number | undefined;
   since: number;
   held: boolean;
 }
@@ -40,13 +42,48 @@ interface Holding {
 /** Every hold this process serves, so a wait past its bound can name who holds and who waits. */
 const holdings = new Set<Holding>();
 
-/** A hold a server serves: how it is taken and given back, what it is, and who asked for it. */
+/** Each hold's way to move its deadline, by the id its request gave. */
+const renewers = new Map<string, (deadline: number | undefined) => void>();
+
+/** A hold a server serves: how it is taken and given back, what it is, who asked for it and by
+ *  when their test must end, and the watch over its resource's waits, which counts its holders. */
 export interface Served {
   readonly take: (gone: AbortSignal) => Promise<void>;
   readonly give: () => void;
   readonly what: string;
   readonly who: string;
+  readonly deadline?: number | undefined;
+  readonly watch?: Watch;
+  readonly id?: string | undefined;
 }
+
+/** A deadline as given: epoch milliseconds, or none. */
+const deadlineIn = (given: unknown): number | undefined => {
+  const value = Number(given);
+  return typeof given === 'string' && Number.isFinite(value) && value > 0 ? value : undefined;
+};
+
+/** The deadline a request gives its holder's test, or none. */
+export const deadlineOf = (incoming: IncomingMessage): number | undefined =>
+  deadlineIn(incoming.headers[DEADLINE_HEADER]);
+
+/** The id a hold's request gives itself, or none. */
+export const holdIdOf = (incoming: IncomingMessage): string | undefined => {
+  const id = incoming.headers[HOLD_ID_HEADER];
+  return typeof id === 'string' && id !== '' ? id : undefined;
+};
+
+/** Moves the deadline of the hold `id` names to `given`, epoch milliseconds or none at all, as
+ *  its test's timeout moved: 204, or 404 for a hold this process doesn't serve. */
+export const answerDeadline = (outgoing: ServerResponse, id: string, given: string): void => {
+  const renew = renewers.get(id);
+  if (renew === undefined) {
+    outgoing.writeHead(404).end(`no hold ${id} here`);
+    return;
+  }
+  renew(deadlineIn(given));
+  outgoing.writeHead(204).end();
+};
 
 /** The holder a request names, decoded, or as sent where it isn't URI-encoded; or that it named
  *  none. */
@@ -79,15 +116,30 @@ export const answerHolders = (outgoing: ServerResponse): void => {
 
 /** A hold (a stack lock, a CPU turn) lasts as long as its request stays open: granted with the
  *  response head, given back when the caller closes it, however its worker ends. */
-export const holdOpen = (outgoing: ServerResponse, { take, give, what, who }: Served): void => {
+export const holdOpen = (outgoing: ServerResponse, served: Served): void => {
+  const { take, give, what, who, deadline, watch, id } = served;
   const gone = new AbortController();
-  const granted = { now: false };
-  const holding: Holding = { what, who, since: Date.now(), held: false };
+  const granted: { now: boolean; held?: Held } = { now: false };
+  const holding: Holding = { what, who, deadline, since: Date.now(), held: false };
   holdings.add(holding);
+  if (id !== undefined) {
+    renewers.set(id, (moved) => {
+      holding.deadline = moved;
+      if (granted.held !== undefined) {
+        granted.held.renew(moved);
+      }
+    });
+  }
   outgoing.once('close', () => {
     holdings.delete(holding);
+    if (id !== undefined) {
+      renewers.delete(id);
+    }
     gone.abort();
     if (granted.now) {
+      if (granted.held !== undefined) {
+        granted.held.release();
+      }
       give();
     }
   });
@@ -99,6 +151,9 @@ export const holdOpen = (outgoing: ServerResponse, { take, give, what, who }: Se
         return;
       }
       granted.now = true;
+      if (watch !== undefined) {
+        granted.held = watch.holding(holding.deadline);
+      }
       holding.held = true;
       holding.since = Date.now();
       outgoing.writeHead(200).flushHeaders();
@@ -119,6 +174,8 @@ export interface Semaphore {
   readonly take: (run: string, slots: number, gone: AbortSignal) => Promise<void>;
   readonly give: (slots: number) => void;
   readonly refuse: (run: string) => void;
+  /** The watch over its waits, which a server counts each holder in. */
+  readonly watch: Watch;
 }
 
 /** The free slots and the turns waiting for them, in the order they asked, and its watch. */
@@ -189,6 +246,7 @@ export const semaphore = (
   const watch = watchOf(stillness, { what, named: holdingsNamed });
   const queue: Queue = { free: slots, waiting: new Set(), watch };
   return {
+    watch,
     take: async (run, asked, gone) => enqueue(queue, { run, slots: asked }, gone),
     give: (given) => {
       watch.moved();
@@ -241,7 +299,11 @@ interface Runs {
  *  for a run never seen, whose gate was stopped and which is rejoining this one. */
 const turnFor = (
   runs: Runs,
-  { run, size, who }: { readonly run: string; readonly size: string; readonly who: string },
+  {
+    run,
+    size,
+    incoming,
+  }: { readonly run: string; readonly size: string; readonly incoming: IncomingMessage },
   outgoing: ServerResponse,
 ): void => {
   if (runs.members.has(run)) {
@@ -252,7 +314,10 @@ const turnFor = (
         runs.turns.give(asked);
       },
       what: `${String(asked)} of the CPU gate's slots for run ${run}`,
-      who,
+      who: holderOf(incoming),
+      deadline: deadlineOf(incoming),
+      watch: runs.turns.watch,
+      id: holdIdOf(incoming),
     });
   } else if (runs.left.has(run)) {
     outgoing.writeHead(410).end(`no cpu for ${run}, which has left`);
@@ -269,6 +334,8 @@ const answer =
     incoming.resume();
     if (action === 'holders') {
       answerHolders(outgoing);
+    } else if (action === 'deadline') {
+      answerDeadline(outgoing, run, size);
     } else if (run === '') {
       outgoing.writeHead(404).end(`no run named for ${action}`);
     } else if (action === 'join') {
@@ -278,7 +345,7 @@ const answer =
       });
       outgoing.writeHead(200, { [GATE_MARK]: GATE_VERSION }).flushHeaders();
     } else if (action === 'cpu') {
-      turnFor(runs, { run, size, who: holderOf(incoming) }, outgoing);
+      turnFor(runs, { run, size, incoming }, outgoing);
     } else {
       outgoing.writeHead(404).end(`no ${action} for ${run}, which has not joined`);
     }
