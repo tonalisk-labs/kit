@@ -2,12 +2,16 @@ name: ci
 
 on:
   pull_request:
+  # A push to main runs the check too, so its caches, which every pull request reads, stay filled.
+  push:
+    branches: [main]
 
 permissions: {}
 
 concurrency:
   group: ci-{% raw %}${{ github.ref }}{% endraw %}
-  cancel-in-progress: true
+  # A newer push waits for a running check, never cut short, and replaces one still queued.
+  cancel-in-progress: false
 
 # kit's workflow bounds each of its jobs with timeout-minutes, which a calling job can't set.
 jobs:
