@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/tonalisk-labs/kit/compare/v1.0.2...v1.0.3) (2026-11-12)
+
+
+### Bug Fixes
+
+* **ci:** install the pinned Rust toolchain once, before any task runs cargo ([#8](https://github.com/tonalisk-labs/kit/issues/8)) ([c3b2459](https://github.com/tonalisk-labs/kit/commit/c3b245981f3345db2f3f85bda91fd93fe0b96855))
+
 ## [1.0.2](https://github.com/tonalisk-labs/kit/compare/v1.0.1...v1.0.2) (2026-11-12)
 
 
