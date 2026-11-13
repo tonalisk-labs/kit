@@ -329,9 +329,9 @@ export interface TestsOptions {
   readonly budgets?: string;
 }
 
-/** Each test's bound, fixed and never scaled to the load, as the slowest row loads a page in tens of
- *  seconds; an assertion keeps Playwright's, as a test first awaits the event it needs. */
-const TEST_TIMEOUT_MS = 2 * 60_000;
+/** Each test's backstop, for one that keeps moving for ever, as its watch ends one standing still
+ *  (stuck.ts): over 2.5 times the slowest seen under load, a 21-minute journal chapter on 3G. */
+const TEST_TIMEOUT_MS = 60 * 60_000;
 
 /** A repo's whole Playwright config, `export default defineTests()`: each site and app crossed with
  *  the matrix rows. Every process of the run loads it, so each reads the budgets file named. */
