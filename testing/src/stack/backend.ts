@@ -25,15 +25,67 @@ export interface BackendBuild {
   readonly profile?: string;
 }
 
+/** A profile's name as Cargo takes one (cargo-util-schemas' `validate_profile_name`): letters,
+ *  numbers, `_` and `-`, and none it keeps for itself. */
+const PROFILE_NAME = /^[\p{Alphabetic}\p{N}_-]+$/u;
+const RESERVED_PROFILES = new Set([
+  'build-override',
+  'build',
+  'check',
+  'clean',
+  'config',
+  'fetch',
+  'fix',
+  'install',
+  'metadata',
+  'package',
+  'publish',
+  'report',
+  'root',
+  'run',
+  'rust',
+  'rustc',
+  'rustdoc',
+  'target',
+  'tmp',
+  'uninstall',
+]);
+/** A feature's name as Cargo takes one (`validate_feature_name`), so no `/` and no `dep:`. */
+const FEATURE_NAME = /^[\p{XID_Start}_0-9][\p{XID_Continue}+.-]*$/u;
+
+const profileNamed = (profile: string): string => {
+  const lower = profile.toLowerCase();
+  if (!PROFILE_NAME.test(profile) || RESERVED_PROFILES.has(lower) || lower.startsWith('cargo')) {
+    throw new Error(
+      `Cargo takes no profile named ${JSON.stringify(profile)}: a profile's name is letters, ` +
+        'numbers, "_" and "-", and none that Cargo keeps for itself',
+    );
+  }
+  return profile;
+};
+
+const featureNamed = (feature: string): string => {
+  if (!FEATURE_NAME.test(feature)) {
+    throw new Error(
+      `Cargo takes no feature named ${JSON.stringify(feature)}: a feature's name starts with a ` +
+        'letter, "_" or a digit, then letters, digits, "_", "-", "+" and "."',
+    );
+  }
+  return feature;
+};
+
+/** Cargo's arguments, each name refused before anything runs unless Cargo would take it, and
+ *  each value its own argument, never joined into another. */
 export const buildArguments = (
   crate: string,
   { features = [], profile = 'release' }: BackendBuild,
 ): string[] => [
   'build',
-  `--profile=${profile}`,
+  '--profile',
+  profileNamed(profile),
   '--package',
   crate,
-  `--features=${features.join(',')}`,
+  ...features.flatMap((feature) => ['--features', featureNamed(feature)]),
   '--message-format=json-render-diagnostics',
 ];
 
