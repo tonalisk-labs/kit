@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.6](https://github.com/tonalisk-labs/kit/compare/v1.0.5...v1.0.6) (2026-11-13)
+
+
+### Bug Fixes
+
+* **ci:** npm publishes the release's tarball by a file path, which kit's check dry-runs ([#21](https://github.com/tonalisk-labs/kit/issues/21)) ([778b019](https://github.com/tonalisk-labs/kit/commit/778b019bfc46c921c0f3a8f60341211e281d9f70))
+
 ## [1.0.5](https://github.com/tonalisk-labs/kit/compare/v1.0.4...v1.0.5) (2026-11-13)
 
 
