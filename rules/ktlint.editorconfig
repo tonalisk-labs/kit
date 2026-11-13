@@ -1,0 +1,10 @@
+# ktlint's settings for every tonalisk-labs Kotlin file, which a repo passes as
+# `ktlint --editorconfig`, its own .editorconfig still winning: ktlint_official, every rule on,
+# experimental ones included, with Compose's rules (io.nlopez.compose.rules:ktlint) loaded beside.
+[*.{kt,kts}]
+indent_style = space
+indent_size = 4
+max_line_length = 100
+ktlint_code_style = ktlint_official
+ktlint_experimental = enabled
+ktlint_function_naming_ignore_when_annotated_with = Composable

@@ -1,0 +1,10 @@
+<!-- Every Android Lint issue, as an error. A repo names this as its lintConfig, with
+     warningsAsErrors, checkAllWarnings and checkDependencies on, and no baseline. -->
+<lint>
+  <issue id="all" severity="error" />
+  <!-- Each asks the network for a newer release, so a build's outcome would change with the
+       calendar; Renovate (default.json) raises those updates instead. -->
+  <issue id="AndroidGradlePluginVersion" severity="ignore" />
+  <issue id="GradleDependency" severity="ignore" />
+  <issue id="NewerVersionAvailable" severity="ignore" />
+</lint>

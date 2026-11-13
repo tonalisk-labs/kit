@@ -4,7 +4,7 @@ A budget that only reports doesn't exist. Every one fails its suite when it's ex
 
 ## Where a budget comes from
 
-1. **The strictest published threshold.** On the web, RAIL (a response in 100 ms, a frame in 16 ms, tasks under 50 ms) and Core Web Vitals' "good" held at half (LCP 1.2 s, INP 100 ms, CLS 0.05) on a mid-range phone. On Apple, hitches under 2 ms/s, no hang over 100 ms, a first frame within 400 ms of a cold launch, and 8 ms frames at 120 Hz. On the server, 10 ms of processor time a request, 2 ms a relay frame, and every query on an index.
+1. **The strictest published threshold.** On the web, RAIL (a response in 100 ms, a frame in 16 ms, tasks under 50 ms) and Core Web Vitals' "good" held at half (LCP 1.2 s, INP 100 ms, CLS 0.05) on a mid-range phone. On Apple, hitches under 2 ms/s, no hang over 100 ms, a first frame within 400 ms of a cold launch, and 8 ms frames at 120 Hz. On Android, no frame dropped (16 ms at 60 Hz, 8 ms at 120 Hz), no main-thread task over 100 ms, and Android vitals' cold start of 5 s held at a tenth, 500 ms, on a low-end phone. On the server, 10 ms of processor time a request, 2 ms a relay frame, and every query on an index.
 2. **Then the best the code has shown.** Where the code does better than the threshold, the budget is what it measures plus its noise, never the looser threshold.
 3. **A fixed cost and a slope.** Each operation is measured at four sizes (10 to 10,000 notes, 1 KB to 1 MB, 1 to 365 days). A least-squares fit gives both, and the log-log slope gives the growth class, which must be the one the design requires. A wrong slope fails while the total still fits.
 
@@ -20,6 +20,6 @@ A budget that only reports doesn't exist. Every one fails its suite when it's ex
 
 - **Every path, by its input.** Each function's time and space in the sizes it depends on (notes, a note's length, days, devices), at the least the problem allows wherever an input can grow.
 - **Every operation, by how often it runs.** Per keystroke, per frame, per sync, per open, per session, or rare. Each class takes its latency budget from the thresholds above.
-- **Profiled at ten times today's largest use** (10,000 notes, a 1 MB note, a year of days), with CDP on the web, `xctrace` on Apple (Time Profiler, CPU Counters, and the SwiftUI and Swift Concurrency instruments), and `criterion` and `dhat` in Rust. A function is hot when it's in the set taking 80% of its operation's processor time, or when its operation misses its budget.
+- **Profiled at ten times today's largest use** (10,000 notes, a 1 MB note, a year of days), with CDP on the web, `xctrace` on Apple (Time Profiler, CPU Counters, and the SwiftUI and Swift Concurrency instruments), Macrobenchmark and Perfetto on Android, with thread CPU time and allocated bytes on the JVM, and `criterion` and `dhat` in Rust. A function is hot when it's in the set taking 80% of its operation's processor time, or when its operation misses its budget.
 - **Minimal means** no allocation per keystroke or frame beyond the edit's own, nothing copied that can be read in place, caches bounded, and memory back at its level after each operation.
 - **What follows.** A hot path gets a performance test at that scale, with processor-time and memory budgets, and a kept profile. A per-keystroke, per-frame or per-sync path gets a budget test. Every other path is checked in review.

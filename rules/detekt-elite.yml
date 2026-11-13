@@ -1,0 +1,11 @@
+# The elite limits on top of kit's detekt.yml: a repo passes both files to detekt, this one last,
+# once its code meets them. detekt reports a value at its threshold, so each is the limit plus one.
+complexity:
+  CyclomaticComplexMethod:
+    threshold: 11
+  CognitiveComplexMethod:
+    threshold: 11
+  LongMethod:
+    threshold: 41
+  NestedBlockDepth:
+    threshold: 4

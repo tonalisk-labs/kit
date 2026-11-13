@@ -13,6 +13,11 @@ osv-scanner = "2.7.1"
 shfmt = "3.14.1"
 uv = "0.13.7"
 zizmor = "1.32.0"
+# Kotlin's rules (rules/detekt*.yml, rules/ktlint.editorconfig), held to their fixtures: detekt
+# isn't in mise's registry, so its release comes by its URL, and both run on the LTS JDK.
+java = "temurin-25.0.5+8.0.LTS"
+ktlint = "1.8.0"
+"http:detekt-cli" = { version = "1.23.8", url = "https://github.com/detekt/detekt/releases/download/v{{ version }}/detekt-cli-{{ version }}.zip", bin_path = "detekt-cli-{{ version }}/bin" }
 
 [env]
 # Tasks run the tools the lockfile installed. A missing one fails, rather than npx fetching
@@ -174,7 +179,8 @@ done
 """
 
 # The template's audit, on kit's own tree, which every repo installs; and the Renovate preset holds
-# a new npm or crate release for 3 days, so a hijacked one can be pulled before it is proposed.
+# a new npm, crate, Maven or Gradle release for 3 days, so a hijacked one can be pulled before it is
+# proposed.
 [tasks.audit]
 run = [
   "npm audit --audit-level=info",
@@ -182,6 +188,7 @@ run = [
   "lockfile-lint --path package-lock.json --allowed-hosts npm --validate-https",
   "osv-scanner scan source --config template/osv-scanner.toml --lockfile package-lock.json --licenses=MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause,ISC,Unicode-3.0,Zlib,CDLA-Permissive-2.0,0BSD,BlueOak-1.0.0,CC0-1.0,Python-2.0",
   "jq -e '.extends | index(\"security:minimumReleaseAgeNpm\") and index(\"security:minimumReleaseAgeCrate\")' default.json > /dev/null",
+  "jq -e '.packageRules | any(.matchDatasources == [\"maven\", \"gradle-version\"] and .minimumReleaseAge == \"3 days\")' default.json > /dev/null",
 ]
 
 [tasks.check]

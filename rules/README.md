@@ -18,12 +18,13 @@ Every tonalisk project holds all its code and tests to this bar, in every langua
 
 A function has a cyclomatic complexity of 10 at most (cognitive, in Rust), nests 3 deep at most and runs 40 lines at most. No block over 10 lines repeats. Each limit lives in a file here, and a repository switches it on once its code meets it, so nothing needs an exception.
 
-| Tool       | How a repository switches it on                                                         |
-| ---------- | --------------------------------------------------------------------------------------- |
-| oxlint     | `oxlint-elite.json` beside `oxlint.json` in its `extends`                               |
-| SwiftLint  | `swiftlint-elite.yml` as its `parent_config`                                            |
-| clippy     | `clippy-elite.toml`'s thresholds in its `clippy.toml`, held by `kit-rust-lints --elite` |
-| Ruff       | `ruff-elite.toml` as its `extend`                                                       |
-| Duplicates | `kit-duplicates`, with jscpd 5.4.2 as a devDependency                                   |
-| Prose      | `kit-prose` beside Vale, with `--ignore` for vendored code                              |
-| Shell      | ShellCheck at `enable=all`, with functions held to 40 lines in review                   |
+| Tool       | How a repository switches it on                                                                     |
+| ---------- | --------------------------------------------------------------------------------------------------- |
+| oxlint     | `oxlint-elite.json` beside `oxlint.json` in its `extends`                                           |
+| SwiftLint  | `swiftlint-elite.yml` as its `parent_config`                                                        |
+| clippy     | `clippy-elite.toml`'s thresholds in its `clippy.toml`, held by `kit-rust-lints --elite`             |
+| Ruff       | `ruff-elite.toml` as its `extend`                                                                   |
+| detekt     | `detekt-elite.yml` after `detekt.yml`, every rule on; `ktlint.editorconfig`, `android-lint.xml` too |
+| Duplicates | `kit-duplicates`, with jscpd 5.4.2 as a devDependency                                               |
+| Prose      | `kit-prose` beside Vale, with `--ignore` for vendored code                                          |
+| Shell      | ShellCheck at `enable=all`, with functions held to 40 lines in review                               |

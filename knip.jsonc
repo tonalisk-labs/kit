@@ -1,0 +1,5 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  // detekt and ktlint, which the tests run to hold Kotlin to rules/, come from mise, not npm.
+  "ignoreBinaries": ["detekt-cli", "ktlint"],
+}

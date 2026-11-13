@@ -12,7 +12,7 @@ and [the workflows](workflows.md) cover CI and releases. To work on kit itself, 
 | `@tonalisk-labs/kit/theme.css`          | The Tailwind base, with `starlight.css` and `themes/<id>.css` beside it                                                      |
 | `@tonalisk-labs/kit/script`             | For a repo's scripts: how one stops on SIGINT or SIGTERM, steps in turn or in a pool, JSON read without casts                |
 | `@tonalisk-labs/kit/components/*.astro` | `Search`, `ThemeSelect`, `StarlightHead` and `BodyFont`                                                                      |
-| `@tonalisk-labs/kit/tsconfig.json`      | The TypeScript settings. The oxlint, oxfmt, ruff, SwiftLint and Vale settings are in `rules/`                                |
+| `@tonalisk-labs/kit/tsconfig.json`      | The TypeScript settings. The oxlint, oxfmt, ruff, SwiftLint, detekt, ktlint, Android Lint and Vale settings are in `rules/`  |
 | `kit-lint-styles`, `kit-seo`            | The style lint and the SEO check over the repo's sites                                                                       |
 | `kit-test`, `kit-test-rust`             | `node --test` and `cargo llvm-cov`, each held to its coverage floors                                                         |
 | crate `kit-server`                      | For Rust backends: typed configuration, a Stripe client, rate limits, problem details, the stop signal, the OpenAPI export   |
