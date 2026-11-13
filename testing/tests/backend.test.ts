@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { executableOf } from '../src/stack/backend.ts';
+import { buildArguments, executableOf } from '../src/stack/backend.ts';
 
 const artifact = (name: string, executable?: string): string =>
   JSON.stringify({ reason: 'compiler-artifact', target: { name }, executable });
@@ -18,6 +18,15 @@ await test("the crate's executable is read from Cargo's artifact lines only", ()
   ].join('\n');
   assert.equal(executableOf(messages, 'backend'), '/target/release/backend');
   assert.equal(executableOf(messages, 'missing'), undefined);
+});
+
+await test('a backend builds with the profile and features it is given', () => {
+  const release = buildArguments('backend', { features: ['metrics'], profile: 'release' });
+  assert.ok(release.includes('--profile=release'));
+  assert.ok(release.includes('--features=metrics'));
+  const profiling = buildArguments('backend', { features: [], profile: 'profiling' });
+  assert.ok(profiling.includes('--profile=profiling'));
+  assert.ok(!profiling.includes('--release'));
 });
 
 await test('lines without an executable are never parsed', () => {

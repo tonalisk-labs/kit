@@ -19,30 +19,43 @@ export const executableOf = (messages: string, crate: string): string | undefine
     )
     .find((executable) => executable !== undefined);
 
-/** In release, as production runs it. */
-export const buildBackend = async (
+/** How a backend is built: its crate's features, and the Cargo profile. */
+export interface BackendBuild {
+  readonly features: readonly string[];
+  readonly profile: string;
+}
+
+/** What builds `crate` as `build` says. */
+export const buildArguments = (crate: string, { features, profile }: BackendBuild): string[] => [
+  'build',
+  `--profile=${profile}`,
+  '--package',
+  crate,
+  `--features=${features.join(',')}`,
+  '--message-format=json-render-diagnostics',
+];
+
+/** As `build` says: the release profile, as production runs it, or another, such as the
+ *  template's `profiling`, which keeps the names and lines a profiler shows. */
+export const buildBackendWith = async (
   crate: string,
   signal: AbortSignal,
-  features: readonly string[] = [],
+  build: BackendBuild,
 ): Promise<string> => {
-  const messages = await run(
-    'cargo',
-    [
-      'build',
-      '--release',
-      '--package',
-      crate,
-      `--features=${features.join(',')}`,
-      '--message-format=json-render-diagnostics',
-    ],
-    { cwd: REPO, signal },
-  );
+  const messages = await run('cargo', buildArguments(crate, build), { cwd: REPO, signal });
   const executable = executableOf(messages, crate);
   if (executable === undefined) {
     throw new Error(`cargo built no binary named ${crate}`);
   }
   return executable;
 };
+
+/** In release, as production runs it. */
+export const buildBackend = async (
+  crate: string,
+  signal: AbortSignal,
+  features: readonly string[] = [],
+): Promise<string> => buildBackendWith(crate, signal, { features, profile: 'release' });
 
 /** With only `env` and PATH, so the caller's shell does not leak in. SIGTERM stops it, and it
  *  drains gracefully. */

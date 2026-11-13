@@ -69,3 +69,10 @@ lto = true
 codegen-units = 1
 overflow-checks = true
 strip = true
+
+# The release build with the names and lines a profiler shows, built into target/profiling, so it
+# can never stand in for what ships.
+[profile.profiling]
+inherits = "release"
+debug = "line-tables-only"
+strip = "none"
