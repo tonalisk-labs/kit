@@ -7,9 +7,15 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 import { PHASE_ENV, phaseOf, testFiles } from '../src/floors/timed.ts';
+import { serveGate } from '../src/stack/gate-server.ts';
+import { freePort } from '../src/stack/ports.ts';
 import { run } from '../src/stack/process.ts';
 
 const RUNNER = path.resolve(import.meta.dirname, '../src/floors/node.ts');
+
+/** The CPU gate the fixture's timed tests hold whole, served here rather than the machine's. */
+const GATE = await freePort();
+assert.notEqual(await serveGate(GATE, 2), undefined);
 
 /** A test file that writes `name` down, with what had been written before it if `looks`. */
 const writer = (log: string, name: string, looks = false): string =>
@@ -54,7 +60,7 @@ const ownEnvironment = (): NodeJS.ProcessEnv =>
         ([key]) => key !== 'NODE_TEST_CONTEXT' && key !== PHASE_ENV,
       ),
     ),
-    { npm_package_name: 'fixture' },
+    { npm_package_name: 'fixture', KIT_CPU_GATE_PORT: String(GATE) },
   );
 
 const byName = (one: string, other: string): number => one.localeCompare(other);
