@@ -209,7 +209,11 @@ jobs:
         with:
           name: release
           path: out
-      - run: npm publish out/*.tgz --provenance --access public
+      # A path npm reads as a file: it takes a bare `out/name.tgz` for a GitHub repo's shorthand.
+      # Its notices list every file, so the log keeps the package's one line.
+      - run: |
+          npm publish ./out/*.tgz --provenance --access public --json --loglevel=warn \
+            | jq -r '.[] | select(.id != null) | "published \(.id): \(.size) bytes, \(.integrity)"'
 
   # Last, after npm: a job that fails before this leaves a draft to rerun, where a published release
   # would stay without its package for good.

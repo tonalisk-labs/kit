@@ -186,17 +186,41 @@ run = [
 
 [tasks.check]
 description = "Every check a pull request runs"
-depends = ["format", "lint", "typecheck", "test", "workflows", "template", "audit"]
+depends = ["format", "lint", "typecheck", "test", "workflows", "template", "audit", "publishable"]
 
 [tasks.release-check]
 description = "The gate before a release is attested"
 depends = ["check", "mutants:rust"]
 
+# The build is its own task, so a check's tests never read dist/ while a pack rebuilds it; npm's
+# notices list every packed file, so the log keeps the tarball's one line.
 [tasks.artifacts]
 description = "The release files: the npm tarball, the crate's source and the Copier template"
-run = [
-  "rm -rf out && mkdir out",
-  "npm pack --pack-destination out",
-  "git archive --format=tar.gz --prefix=kit-server/ -o out/kit-server.tar.gz HEAD:server",
-  "git archive --format=tar.gz --prefix=template/ -o out/template.tar.gz HEAD:template",
-]
+depends = ["build"]
+shell = "bash -c"
+run = '''
+set -euo pipefail
+rm -rf out
+mkdir out
+npm pack --ignore-scripts --json --pack-destination out \
+  | jq -r '.[] | select(.filename != null) | "packed \(.filename): \(.size) bytes, \(.integrity)"'
+git archive --format=tar.gz --prefix=kit-server/ -o out/kit-server.tar.gz HEAD:server
+git archive --format=tar.gz --prefix=template/ -o out/template.tar.gz HEAD:template
+'''
+
+# The release's npm step, dry, over the same tarball: npm reads its path as a file and the package
+# as it would publish it. The release adds provenance, which needs its job's OIDC token.
+[tasks.publishable]
+description = "release.yml's npm publish, as a dry run over the packed tarball"
+depends = ["artifacts"]
+shell = "bash -c"
+run = '''
+set -euo pipefail
+command='npm publish ./out/*.tgz --provenance --access public --json --loglevel=warn'
+grep -q -F "$command" .github/workflows/release.yml \
+  || { echo "publishable: release.yml's npm step is no longer $command"; exit 1; }
+# A dry run warns that nobody is logged in: the placeholder stands for the release's OIDC token.
+npm publish ./out/*.tgz --dry-run --access public --json --loglevel=warn \
+  --@tonalisk-labs:registry=https://registry.npmjs.org '--//registry.npmjs.org/:_authToken=dry-run' \
+  | jq -r '.[] | select(.id != null) | "publishable \(.id): \(.size) bytes, \(.integrity)"'
+'''
