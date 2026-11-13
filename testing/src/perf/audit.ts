@@ -87,8 +87,8 @@ const carry = (
   }
 };
 
-/** The chance `now` wins `wins` pairs or more, drawn at random from the pooled runs: each group
- *  of equal runs splits every way, a drawn run beating the undrawn below and tying its group's. */
+/** The chance `now` wins `wins` pairs or more, drawn at random from the pooled runs a group of
+ *  equal runs at a time: a run drawn beats the rest below and ties its group's, which `last` holds. */
 const exactChance = (wins: number, now: readonly number[], last: readonly number[]): number => {
   const sizes = [...Map.groupBy([...now, ...last], (value) => value).entries()]
     .toSorted(([low], [high]) => low - high)
@@ -98,7 +98,8 @@ const exactChance = (wins: number, now: readonly number[], last: readonly number
   for (const size of sizes) {
     const next = Array.from({ length: now.length + 1 }, () => new Map<number, number>());
     for (const [taken, reached] of byDrawn.entries()) {
-      for (let drawn = 0; drawn <= Math.min(size, now.length - taken); drawn += 1) {
+      const fewest = Math.max(0, seen + size - taken - last.length);
+      for (let drawn = fewest; drawn <= Math.min(size, now.length - taken); drawn += 1) {
         const gained = drawn * (2 * (seen - taken) + size - drawn);
         carry(
           reached,
@@ -142,8 +143,8 @@ const approximateChance = (
   return variance === 0 ? 1 : upperTail((wins - pairs / 2 - 0.5) / Math.sqrt(variance));
 };
 
-/** How likely `now` would rank this far above `last` were they drawn alike: exact up to a few
- *  hundred pairs, ties included, else the normal approximation. */
+/** How likely `now` would rank this far above `last` were they drawn alike: exact up to
+ *  `EXACT_PAIRS` pairs, ties included, else the normal approximation. */
 export const regressionChance = (now: readonly number[], last: readonly number[]): number => {
   const wins = pairsWon(now, last);
   return now.length * last.length > EXACT_PAIRS
@@ -176,9 +177,15 @@ const countedVerdict = (reading: Reading, before: Reading | undefined): Verdict 
   const [now = Number.NaN] = reading.samples;
   const last = lastCount(before);
   const said = countedSaid(reading, now, last);
-  const tighter = said === undefined && now < reading.budget ? now : undefined;
+  const held = said === undefined || !said.failed;
+  const tighter = held && now < reading.budget ? now : undefined;
   return { reading, now, spread: 0, last, chance: undefined, said, tighter };
 };
+
+/** The most a run's median may reach beside `last` and be its noise: its median and 3 MADs,
+ *  or none at all when `last` was over `budget` itself. */
+const noiseOf = (last: readonly number[], budget: number): number =>
+  median(last) <= budget ? median(last) + NOISE * deviation(last) : Number.NEGATIVE_INFINITY;
 
 /** The last release's runs of a measure, when there are enough of them to judge noise by. */
 const comparable = (before: Reading | undefined): readonly number[] | undefined =>
@@ -186,8 +193,8 @@ const comparable = (before: Reading | undefined): readonly number[] | undefined 
     ? before.samples
     : undefined;
 
-/** Over its budget is noise only beside a last release that held the budget and runs no faster
- *  by the test; otherwise it fails, as it does with no last release to judge it by. */
+/** Over its budget is noise only beside a last release that held the budget, runs no faster by
+ *  the test, and is within that release's median and 3 MADs; else it fails, as with none. */
 const measuredSaid = (
   reading: Reading,
   now: number,
@@ -202,8 +209,8 @@ const measuredSaid = (
   if (slower) {
     return failed(`${over}, and slower than the last release${odds}`);
   }
-  return last !== undefined && median(last) <= reading.budget
-    ? noted(`${over}, where the last release held it and ran no faster${odds}: noise`)
+  return last !== undefined && now <= noiseOf(last, reading.budget)
+    ? noted(`${over}, within the noise of the last release, which held it${odds}`)
     : failed(over);
 };
 
@@ -241,10 +248,10 @@ export const audit = (now: Readings, last?: Readings): Verdict[] => {
   });
 };
 
-/** The measures the last release took on this machine that this run took none of. */
-export const dropped = (now: Readings, last?: Readings): string[] => {
-  const names = new Set(now.readings.map(({ name }) => name));
-  return [...before(now, last).keys()].filter((name) => !names.has(name));
+/** The measures the last release took on this machine that this run took none of, in its unit. */
+export const dropped = (now: Readings, last?: Readings): Reading[] => {
+  const units = new Map(now.readings.map(({ name, unit }) => [name, unit]));
+  return [...before(now, last).values()].filter(({ name, unit }) => units.get(name) !== unit);
 };
 
 const isText = (value: unknown): value is string => typeof value === 'string' && value !== '';
@@ -267,7 +274,7 @@ const readingOf = (value: unknown, at: string): Reading => {
     [isText(unit), 'a unit'],
     [typeof counted === 'boolean', 'whether it is counted'],
     [isAmount(budget), 'a budget of 0 or more'],
-    [samples !== undefined, 'samples of 0 or more'],
+    [samples !== undefined, 'one sample or more, each 0 or more'],
   ].flatMap(([held, what]) => (held === true ? [] : [String(what)]));
   throw new Error(`${at} lacks ${wrong.join(', ')}`);
 };
@@ -281,7 +288,7 @@ export const readingsOf = (json: unknown, source: string): Readings => {
     readingOf(value, `${source}, reading ${String(index + 1)}`),
   );
   const names = readings.map(({ name }) => name);
-  const twice = names.filter((name, index) => names.indexOf(name) !== index);
+  const twice = [...new Set(names.filter((name, index) => names.indexOf(name) !== index))];
   if (readings.length === 0 || twice.length > 0) {
     throw new Error(
       `${source} holds ${readings.length === 0 ? 'no reading' : `${twice.join(', ')} twice`}`,
@@ -330,7 +337,9 @@ export const report = (verdicts: readonly Verdict[], now: Readings, last?: Readi
   ...(last !== undefined && last.machine !== now.machine
     ? [`The last release was measured on ${last.machine}, not ${now.machine}: only budgets held.`]
     : []),
-  ...dropped(now, last).map((name) => `${name}: measured by the last release, not by this run`),
+  ...dropped(now, last).map(
+    ({ name, unit }) => `${name}: measured by the last release in ${unit}, not by this run`,
+  ),
   ...verdicts.flatMap(({ reading, tighter }) =>
     tighter === undefined
       ? []

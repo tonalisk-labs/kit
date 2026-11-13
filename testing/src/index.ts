@@ -25,7 +25,6 @@ export {
 } from './stripe-checkout.ts';
 export { startTarget, type Coordinates } from './stack/stack.ts';
 export { buildBackend, startBackend } from './stack/backend.ts';
-export type { Reading, Readings } from './perf/audit.ts';
 export { startPostgres } from './stack/postgres.ts';
 export { freePort } from './stack/ports.ts';
 export { leftovers } from './stack/leftovers.ts';
@@ -55,6 +54,7 @@ export {
   setNetwork,
   type EdgeFault,
 } from './edge-client.ts';
+export type { Reading, Readings } from './perf/audit.ts';
 export { pageCpuClock } from './perf/cpu.ts';
 export { type Reference, referenceOf, underReference } from './perf/profile.ts';
 export { type FlowOptions, type FlowResult, withFlow } from './perf/lighthouse.ts';
