@@ -52,11 +52,17 @@ const imageError = async (page: Page, engine: BrowserType): Promise<unknown> =>
     ? page.waitForEvent('console', (message) => message.type() === 'error')
     : Promise.resolve();
 
-/** Leaves a page while its image is still arriving. */
+/** Whether the page's image has its size, which a decoder sets once it has read the image's
+ *  headers: Firefox reports an abandoned image only after that. */
+const sized = (): boolean => {
+  const image = globalThis.document.querySelector('img');
+  return image !== null && image.naturalWidth > 0;
+};
+
+/** Leaves a page while its image is still arriving, once its decoder has begun on it. */
 const leave = async (page: Page, engine: BrowserType): Promise<void> => {
-  const arriving = page.waitForResponse(`${origin}/held.jpg`);
   await page.goto(`${origin}/leaving`, { waitUntil: 'commit' });
-  await arriving;
+  await page.waitForFunction(sized);
   const reported = imageError(page, engine);
   await page.getByRole('link', { name: 'Other' }).click();
   await page.waitForURL(`${origin}/other`);
