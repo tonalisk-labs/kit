@@ -1,8 +1,8 @@
 # kit's entry points
 
 What each part of `@tonalisk-labs/kit` gives a repo. [Setting one up](use.md) has the snippets,
-and [the workflows](workflows.md) cover CI and releases. To work on kit itself, see
-[CONTRIBUTING.md](../CONTRIBUTING.md).
+[the workflows](workflows.md) cover CI and releases, and [profiling](profiling.md) finds where the time
+and memory go. To work on kit itself, see [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 | Entry                                   | What it gives                                                                                                                |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -15,5 +15,6 @@ and [the workflows](workflows.md) cover CI and releases. To work on kit itself, 
 | `@tonalisk-labs/kit/tsconfig.json`      | The TypeScript settings. The oxlint, oxfmt, ruff, SwiftLint and Vale settings are in `rules/`                                |
 | `kit-lint-styles`, `kit-seo`            | The style lint and the SEO check over the repo's sites                                                                       |
 | `kit-test`, `kit-test-rust`             | `node --test` and `cargo llvm-cov`, each held to its coverage floors                                                         |
+| `kit-perf-audit`                        | The release audit: a run's readings held to their budgets and to the last release's (rules/budgets.md)                       |
 | crate `kit-server`                      | For Rust backends: typed configuration, a Stripe client, rate limits, problem details, the stop signal, the OpenAPI export   |
 | `uvx copier copy gh:tonalisk-labs/kit`  | A new repo set up the same way. A private one gets gitleaks and its own hooks in place of a licence, releases and CI         |
