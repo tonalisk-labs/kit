@@ -16,6 +16,7 @@ import { deviceOf, type Row, ROWS, rowName, tierRows } from './matrix.ts';
 import { outputOf } from './output.ts';
 import { own } from './own.ts';
 import { BUDGETS_ENV } from './perf/budgets.ts';
+import type { StdoutOptions } from './perf/reporter.ts';
 import { LINUX_BROWSERS, MEASURE_ENV } from './stack/control.ts';
 import { SLOTS } from './stack/gate-server.ts';
 import { BASELINE_ARCH, VISUAL_MOTION } from './visual.ts';
@@ -38,6 +39,13 @@ const measuring = (): boolean => process.env[MEASURE_ENV] === '1';
 
 /** A setup builds a target from scratch, a release Rust build included; it may take this long. */
 export const SETUP_TIMEOUT_MS = 30 * 60_000;
+
+/** The reporter names slow files, past the setup: its one test builds the target, which no split
+ *  across workers shortens. Playwright's own report, which can't leave it out, names none. */
+const REPORTING = {
+  reporter: [['list'], [STDOUT_REPORTER, { setupFile: SETUP } satisfies StdoutOptions]],
+  reportSlowTests: { max: 0, threshold: Number.POSITIVE_INFINITY },
+} satisfies Pick<PlaywrightTestConfig, 'reporter' | 'reportSlowTests'>;
 
 /** A run's workers: the machine's slots, so a run alone fills them; a measured run holds two,
  *  whatever the host, so its figures stay comparable. */
@@ -341,7 +349,8 @@ export const defineTests = ({ budgets }: TestsOptions = {}): PlaywrightTestConfi
     forbidOnly: true,
     retries: 0,
     workers: hostWorkers(),
-    reporter: [['list'], [STDOUT_REPORTER]],
+    reporter: REPORTING.reporter,
+    reportSlowTests: REPORTING.reportSlowTests,
     outputDir: output.outputDir,
     preserveOutput: output.preserveOutput,
     globalSetup: GLOBAL_SETUP,
