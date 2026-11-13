@@ -1,20 +1,22 @@
-// The release audit: a reading over its budget fails, as does one the last release's beats on
-// the same machine by a Mann-Whitney U test at p < 0.01; counted work is held exactly; and a
-// budget measured well under is offered to tighten.
+// The release audit: a reading over its budget fails unless a last release that held the budget
+// shows it noise, by a Mann-Whitney U test at p < 0.01 on the same machine; counted work is held
+// exactly; and a budget measured well under from 10 runs is offered to tighten.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
   audit,
   deviation,
-  median,
+  dropped,
   type Reading,
   type Readings,
+  readingsFrom,
   readingsOf,
   regressionChance,
   report,
   type Verdict,
 } from '../src/perf/audit.ts';
+import { median } from '../src/perf/stats.ts';
 
 const measure = (samples: number[], budget = 100): Reading => ({
   name: 'open a note',
@@ -41,10 +43,27 @@ const verdictOf = (now: Readings, last?: Readings): Verdict => {
   return verdict;
 };
 
-/** The verdict on `reading` alone, or against `last` taken on the same machine. */
+/** What the audit says of `reading` alone, or against `last` taken on the same machine. */
 const alone = (reading: Reading): Verdict => verdictOf(on('mac', reading));
 const against = (reading: Reading, last: Reading): Verdict =>
   verdictOf(on('mac', reading), on('mac', last));
+const saying = ({ said }: Verdict): string =>
+  said === undefined ? 'holds' : `${said.failed ? 'fails' : 'notes'}: ${said.reason}`;
+/** What the audit says of `reading`, alone or against `last` from the same machine. */
+const says = (reading: Reading, last?: Reading): string =>
+  saying(last === undefined ? alone(reading) : against(reading, last));
+/** `length` whole numbers on from `start`, or ten cycling through five on from it. */
+const series = (start: number, length: number): number[] =>
+  [...Array.from({ length }).keys()].map((index) => start + index);
+/** The budget `samples` may tighten it to, alone. */
+const tighter = (samples: number[]): number | undefined => alone(measure(samples)).tighter;
+const ten = (start: number): number[] => series(0, 10).map((index) => start + (index % 5));
+/** `reading` as another of its fields would make it. */
+const changed = (reading: Reading, change: Readonly<Record<string, unknown>>): unknown =>
+  Object.fromEntries([...Object.entries(reading), ...Object.entries(change)]);
+
+const OVER = [101, 102, 103, 104, 105];
+const HELD = [90, 91, 92, 93, 94];
 
 await test('the median and its absolute deviation', () => {
   assert.equal(median([3, 1, 2]), 2);
@@ -60,93 +79,175 @@ await test('the exact test: five runs apart are significant, four are not', () =
   assert.ok(mixed > 0.5 && mixed < 0.8, String(mixed));
 });
 
-await test('tied runs take the normal approximation', () => {
-  const apart = regressionChance([2, 2, 2, 3, 3, 3], [1, 1, 1, 2, 2, 2]);
-  assert.ok(apart < 0.02 && apart > 0.001, String(apart));
+await test('ties are counted exactly, as every split of the pooled runs gives them', () => {
+  // Each against counting every split of the pooled runs.
+  assert.equal(regressionChance([2, 2, 2, 3, 3, 3], [1, 1, 1, 2, 2, 2]).toFixed(9), '0.021645022');
+  assert.equal(regressionChance([5, 3, 5, 3, 5], [0, 3, 2, 2, 1]).toFixed(9), '0.011904762');
+  assert.equal(regressionChance([1, 1, 1, 2, 2, 2], [2, 2, 2, 3, 3, 3]), 1);
   assert.equal(regressionChance([4, 4, 4, 4, 4], [4, 4, 4, 4, 4]), 1);
 });
 
-await test('a measure over its budget fails, and one under it passes', () => {
-  assert.equal(alone(measure([101, 102, 103, 104, 105])).failure, 'over its budget of 100');
-  const under = alone(measure([90, 91, 92, 93, 94]));
-  assert.equal(under.failure, undefined);
-  assert.equal(under.now, 92);
+await test('900 pairs are counted exactly, and more take the normal approximation', () => {
+  const apart = series(0, 30);
+  const later = series(30, 30);
+  assert.equal(regressionChance(later, apart).toPrecision(6), '8.45562e-18');
+  // Against the same approximation worked out apart, with Python's math.erfc, ties and all.
+  const now = series(0, 31).map((index) => 10 + (index % 7));
+  const last = series(0, 30).map((index) => 9 + (index % 7));
+  assert.equal(regressionChance(now, last).toFixed(6), '0.040311');
+  assert.equal(regressionChance([...last, 9], now.slice(0, 30)).toFixed(6), '0.975288');
+});
+
+await test('a measure over its budget fails with no last release, and one at or under it holds', () => {
+  assert.equal(says(measure(OVER)), 'fails: over its budget of 100');
+  assert.equal(says(measure([96, 98, 100, 102, 104])), 'holds');
+  assert.equal(alone(measure(HELD)).now, 92);
 });
 
 await test('a measure takes five runs', () => {
-  assert.equal(alone(measure([1, 2, 3, 4])).failure, '4 runs, where a measure takes 5 or more');
+  assert.equal(says(measure([1, 2, 3, 4])), 'fails: 4 runs, where a measure takes 5 or more');
 });
 
-await test('over its budget fails unless the last release was as slow, and only on one machine', () => {
-  const now = measure([101, 102, 103, 104, 105]);
+await test('over its budget is noise only beside a last release that held it and ran no faster', () => {
+  const slower = against(measure(OVER), measure(HELD));
   assert.equal(
-    against(now, measure([90, 91, 92, 93, 94])).failure,
-    `over its budget of 100, and slower than the last release (p = ${(1 / 252).toFixed(4)})`,
+    saying(slower),
+    `fails: over its budget of 100, and slower than the last release (p = ${(1 / 252).toFixed(4)})`,
   );
-  const noise = against(now, measure([100, 102, 104, 106, 108]));
-  assert.equal(noise.failure, undefined);
-  assert.match(
-    noise.note ?? '',
-    /^over its budget of 100, as the last release was \(p = 0\.\d+\): noise$/u,
+  assert.equal(slower.last, 92);
+  const noise = says(measure(OVER), measure([98, 99, 100, 104, 106]));
+  assert.match(noise, /^notes: over its budget of 100, where the last release held it .+: noise$/u);
+  // A last release over its budget too can't excuse it, so a slow creep fails.
+  assert.equal(
+    says(measure(OVER), measure([100, 101, 102, 104, 106])),
+    'fails: over its budget of 100',
   );
-  const elsewhere = verdictOf(on('mac', now), on('linux', measure([100, 102, 104, 106, 108])));
-  assert.equal(elsewhere.failure, 'over its budget of 100');
+});
+
+await test('a last release too thin, counted or elsewhere judges nothing', () => {
+  assert.equal(says(measure(OVER), measure([10, 11, 12])), 'fails: over its budget of 100');
+  const countedBefore: Reading = {
+    name: 'open a note',
+    unit: 'ms',
+    counted: true,
+    budget: 100,
+    samples: [5],
+  };
+  assert.equal(says(measure(OVER), countedBefore), 'fails: over its budget of 100');
+  const inSeconds: Reading = {
+    name: 'open a note',
+    unit: 's',
+    counted: false,
+    budget: 100,
+    samples: HELD,
+  };
+  assert.equal(says(measure(OVER), inSeconds), 'fails: over its budget of 100');
+  const elsewhere = verdictOf(on('mac', measure(OVER)), on('linux', measure(HELD)));
+  assert.equal(saying(elsewhere), 'fails: over its budget of 100');
   assert.equal(elsewhere.last, undefined);
 });
 
 await test('slower than the last release within its budget is noted, not failed', () => {
-  const slower = against(measure([60, 61, 62, 63, 64]), measure([50, 51, 52, 53, 54]));
-  assert.equal(slower.failure, undefined);
-  assert.equal(slower.last, 52);
   assert.equal(
-    slower.note,
-    `slower than the last release (p = ${(1 / 252).toFixed(4)}), within its budget`,
+    says(measure([60, 61, 62, 63, 64]), measure([50, 51, 52, 53, 54])),
+    `notes: slower than the last release (p = ${(1 / 252).toFixed(4)}), within its budget`,
   );
 });
 
-await test('counted work is held exactly, to its budget and to the last release', () => {
+await test('counted work is held exactly to its budget, and a rise within it is noted', () => {
+  assert.equal(says(counted([10, 11])), 'fails: counted 10, 11: counted work is the same each run');
+  assert.equal(says(counted([101])), 'fails: over its budget of 100');
   assert.equal(
-    alone(counted([10, 11])).failure,
-    'counted 10, 11: counted work is the same each run',
+    says(counted([90]), counted([80])),
+    "notes: above the last release's 80, within its budget",
   );
-  assert.equal(alone(counted([101])).failure, 'over its budget of 100');
-  assert.equal(against(counted([90]), counted([80])).failure, 'above the last release');
   const same = against(counted([100]), counted([100]));
-  assert.equal(same.failure, undefined);
+  assert.equal(saying(same), 'holds');
   assert.equal(same.tighter, undefined);
-});
-
-await test('a budget measured well under is offered to tighten to the median and its noise', () => {
   assert.equal(alone(counted([90])).tighter, 90);
-  assert.equal(alone(measure([88, 89, 90, 91, 92])).tighter, undefined);
-  assert.equal(alone(measure([60, 61, 62, 63, 64])).tighter, 65);
 });
 
-await test('the report tables every measure, the machine, and each budget that may tighten', () => {
-  const now = on('mac', measure([60, 61, 62, 63, 64]), counted([101]));
-  const last = on('linux', measure([60, 61, 62, 63, 64]));
-  const lines = report(audit(now, last), now, last);
-  assert.equal(lines[0], '| measure | unit | now | budget | last release | p | verdict |');
-  assert.equal(lines[2], '| open a note | ms | 62 ±1 | 100 |  |  | ok |');
+await test('a budget tightens only from 10 runs, and only when more than 10% better', () => {
+  assert.equal(tighter([60, 61, 62, 63, 64]), undefined);
+  assert.equal(tighter(ten(60)), 65);
+  // The median and its noise come to exactly 90: not more than 10% better.
+  assert.equal(tighter(ten(85)), undefined);
+  assert.equal(tighter(ten(84)), 89);
+});
+
+await test('the report shows counts exactly, and every measure, machine and budget to tighten', () => {
+  const big: Reading = {
+    name: 'bytes a sync',
+    unit: 'blocks',
+    counted: true,
+    budget: 1_234_568,
+    samples: [1_234_567],
+  };
+  const now = on('mac', measure([60, 61, 62, 63, 64]), big);
+  const lines = report(audit(now), now);
   assert.equal(
-    lines[3],
-    '| allocations a keystroke | blocks | 101 | 100 |  |  | over its budget of 100 |',
+    lines[0],
+    '| measure | unit | now (median ± MAD) | budget | last release | p | verdict |',
   );
-  assert.ok(lines.includes('The last release was measured on linux, not mac: only budgets held.'));
-  assert.ok(lines.includes('open a note: its budget may tighten to 65 ms'));
+  assert.equal(lines[2], '| open a note | ms | 62 ±1 | 100 |  |  | ok |');
+  assert.equal(lines[3], '| bytes a sync | blocks | 1234567 | 1234568 |  |  | ok |');
+  assert.ok(lines.includes('bytes a sync: its budget may tighten to 1234567 blocks'));
+  const last = on('linux', measure(HELD));
+  assert.ok(
+    report(audit(now, last), now, last).includes(
+      'The last release was measured on linux, not mac: only budgets held.',
+    ),
+  );
+  const failing = on('mac', measure(OVER));
+  assert.equal(
+    report(audit(failing), failing)[2],
+    '| open a note | ms | 103 ±1 | 100 |  |  | fails: over its budget of 100 |',
+  );
 });
 
-await test('readings are read whole, or refused with where they went wrong', () => {
-  const json: unknown = JSON.parse(
-    '{"machine":"mac","readings":[{"name":"n","unit":"ms","counted":false,"budget":5,"samples":[1]}]}',
+await test('a measure the last release took and this run did not is named', () => {
+  const now = on('mac', measure(HELD));
+  const last = on('mac', measure(HELD), counted([5]));
+  assert.deepEqual(dropped(now, last), ['allocations a keystroke']);
+  assert.ok(
+    report(audit(now, last), now, last).includes(
+      'allocations a keystroke: measured by the last release, not by this run',
+    ),
   );
-  assert.deepEqual(readingsOf(json, 'now.json'), {
+  const elsewhere = on('linux', counted([5]));
+  assert.deepEqual(dropped(now, elsewhere), []);
+});
+
+await test('readings are read whole, or refused with what is wrong and where', () => {
+  const reading = { name: 'n', unit: 'ms', counted: false, budget: 5, samples: [1] };
+  assert.deepEqual(readingsOf({ machine: 'mac', readings: [reading] }, 'now.json'), {
     machine: 'mac',
-    readings: [{ name: 'n', unit: 'ms', counted: false, budget: 5, samples: [1] }],
+    readings: [reading],
   });
-  assert.throws(() => readingsOf([], 'now.json'), /now\.json holds no readings/u);
+  const lacks = (change: Readonly<Record<string, unknown>>, what: string): void => {
+    assert.throws(
+      () => readingsOf({ machine: 'mac', readings: [changed(reading, change)] }, 'now.json'),
+      new RegExp(`^Error: now\\.json, reading 1 lacks ${what}$`, 'u'),
+    );
+  };
+  lacks({ name: '' }, 'a name');
+  lacks({ unit: 7 }, 'a unit');
+  lacks({ counted: 'yes' }, 'whether it is counted');
+  lacks({ budget: -1 }, 'a budget of 0 or more');
+  lacks({ samples: [] }, 'samples of 0 or more');
+  lacks({ samples: [1, -2] }, 'samples of 0 or more');
+  assert.throws(() => readingsOf([], 'now.json'), /^Error: now\.json holds no readings/u);
   assert.throws(
-    () => readingsOf({ machine: 'mac', readings: [{ name: 'n', samples: [] }] }, 'now.json'),
-    /now\.json, reading 1 is no reading/u,
+    () => readingsOf({ machine: '', readings: [reading] }, 'now.json'),
+    /holds no readings/u,
   );
+  assert.throws(
+    () => readingsOf({ machine: 'mac', readings: [] }, 'now.json'),
+    /^Error: now\.json holds no reading$/u,
+  );
+  assert.throws(
+    () => readingsOf({ machine: 'mac', readings: [reading, reading] }, 'now.json'),
+    /^Error: now\.json holds n twice$/u,
+  );
+  assert.throws(() => readingsFrom('{', 'now.json'), /^Error: now\.json is no JSON: /u);
 });

@@ -25,6 +25,7 @@ export {
 } from './stripe-checkout.ts';
 export { startTarget, type Coordinates } from './stack/stack.ts';
 export { buildBackend, startBackend } from './stack/backend.ts';
+export type { Reading, Readings } from './perf/audit.ts';
 export { startPostgres } from './stack/postgres.ts';
 export { freePort } from './stack/ports.ts';
 export { leftovers } from './stack/leftovers.ts';

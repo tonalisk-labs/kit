@@ -13,6 +13,7 @@ import type {
 
 import { isObject } from '../unknown.ts';
 import { ceiling, minimumScore } from './budgets.ts';
+import { median as middleOf } from './stats.ts';
 import {
   FAILURE_ATTACHMENT,
   isMeasured,
@@ -47,15 +48,12 @@ interface Stat {
 
 /** The median and the sample standard deviation (n − 1). */
 const statOf = (values: readonly number[]): Stat => {
-  const sorted = values.toSorted((left, right) => left - right);
-  const middle = Math.floor(sorted.length / 2);
-  const median =
-    sorted.length % 2 === 1
-      ? (sorted[middle] ?? 0)
-      : ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2;
   const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
   const squares = values.reduce((sum, value) => sum + (value - mean) ** 2, 0);
-  return { median, deviation: values.length > 1 ? Math.sqrt(squares / (values.length - 1)) : 0 };
+  return {
+    median: middleOf(values),
+    deviation: values.length > 1 ? Math.sqrt(squares / (values.length - 1)) : 0,
+  };
 };
 
 /** The share of its budget a median uses: 1 is exactly the budget. A score held at 100 has no room

@@ -5,20 +5,21 @@
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 
-import { audit, type Readings, readingsOf, report } from './perf/audit.ts';
+import { audit, type Readings, readingsFrom, report } from './perf/audit.ts';
 
+const USAGE = 'usage: kit-perf-audit readings.json [--last last-release.json]';
 const { values, positionals } = parseArgs({
   options: { last: { type: 'string' } },
   allowPositionals: true,
 });
-const [file] = positionals;
-if (file === undefined) {
-  throw new Error('usage: kit-perf-audit readings.json [--last last-release.json]');
+const [file, ...more] = positionals;
+if (file === undefined || more.length > 0) {
+  throw new Error(more.length > 0 ? `${USAGE}: the last release's readings follow --last` : USAGE);
 }
-const read = (source: string): Readings =>
-  readingsOf(JSON.parse(readFileSync(source, 'utf8')), source);
+const read = (source: string): Readings => readingsFrom(readFileSync(source, 'utf8'), source);
 const now = read(file);
 const last = values.last === undefined ? undefined : read(values.last);
 const verdicts = audit(now, last);
 console.log(report(verdicts, now, last).join('\n'));
-process.exitCode = verdicts.some(({ failure }) => failure !== undefined) ? 1 : 0;
+const said = verdicts.flatMap((verdict) => (verdict.said === undefined ? [] : [verdict.said]));
+process.exitCode = said.some(({ failed }) => failed) ? 1 : 0;
