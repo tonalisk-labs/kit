@@ -20,13 +20,32 @@ await test("the crate's executable is read from Cargo's artifact lines only", ()
   assert.equal(executableOf(messages, 'missing'), undefined);
 });
 
-await test('a backend builds with the profile and features it is given', () => {
-  const release = buildArguments('backend', { features: ['metrics'], profile: 'release' });
-  assert.ok(release.includes('--profile=release'));
-  assert.ok(release.includes('--features=metrics'));
-  const profiling = buildArguments('backend', { features: [], profile: 'profiling' });
-  assert.ok(profiling.includes('--profile=profiling'));
-  assert.ok(!profiling.includes('--release'));
+await test('a backend builds in release, with no features, unless told otherwise', () => {
+  const json = '--message-format=json-render-diagnostics';
+  assert.deepEqual(buildArguments('backend', {}), [
+    'build',
+    '--profile=release',
+    '--package',
+    'backend',
+    '--features=',
+    json,
+  ]);
+  assert.deepEqual(buildArguments('backend', { features: ['metrics', 'tls'] }), [
+    'build',
+    '--profile=release',
+    '--package',
+    'backend',
+    '--features=metrics,tls',
+    json,
+  ]);
+  assert.deepEqual(buildArguments('backend', { profile: 'profiling' }), [
+    'build',
+    '--profile=profiling',
+    '--package',
+    'backend',
+    '--features=',
+    json,
+  ]);
 });
 
 await test('lines without an executable are never parsed', () => {
