@@ -1,0 +1,54 @@
+# Code scanning: kit's workflows, its TypeScript and its crate, each read from source (build mode
+# none) with CodeQL's default queries, as the default setup read them. GitHub refuses a workflow's
+# analysis while the repository's default setup is on, so that is off in its settings.
+name: codeql
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  # Weekly too, so new queries reach code that hasn't changed.
+  schedule:
+    - cron: '41 3 * * 2'
+
+permissions: {}
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  # A newer push waits for a running analysis, never cut short, and replaces one still queued.
+  cancel-in-progress: false
+
+jobs:
+  analyze:
+    name: analyze, ${{ matrix.language }}
+    runs-on: ubuntu-24.04
+    # A hung runner or download ends here, not after GitHub's 6 hours.
+    timeout-minutes: 30
+    permissions:
+      contents: read # to check out the code
+      security-events: write # to upload the analysis to code scanning
+    strategy:
+      fail-fast: false
+      matrix:
+        # The categories the default setup used, so its alerts carry over.
+        language: [actions, javascript-typescript, rust]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # Its `git init` names the branch, and a pull request's merge ref is detached on purpose:
+        # no advice.
+        env:
+          GIT_CONFIG_COUNT: '2'
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
+          GIT_CONFIG_KEY_1: advice.detachedHead
+          GIT_CONFIG_VALUE_1: 'false'
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: /language:${{ matrix.language }}
