@@ -1,7 +1,7 @@
 [package]
 name = "kit-server"
 description = "What the tonalisk-labs backends share: configuration, Stripe, rate limits, problem details, stopping, the OpenAPI export, and how work grows in processor time."
-version = "1.0.4"
+version = "1.0.5"
 repository = "https://github.com/tonalisk-labs/kit"
 edition.workspace = true
 rust-version.workspace = true

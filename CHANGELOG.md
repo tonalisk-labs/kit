@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.5](https://github.com/tonalisk-labs/kit/compare/v1.0.4...v1.0.5) (2026-11-13)
+
+
+### Bug Fixes
+
+* **deps:** astro 7.4.9, past the two advisories published against 7.3.8 ([#18](https://github.com/tonalisk-labs/kit/issues/18)) ([9db19e7](https://github.com/tonalisk-labs/kit/commit/9db19e7485702ddc4b1678c9e99ee3ba102d7f2f))
+* **testing:** an abandoned image is left once its decoder has its size, as Firefox needs to report it ([#20](https://github.com/tonalisk-labs/kit/issues/20)) ([0e38e57](https://github.com/tonalisk-labs/kit/commit/0e38e57cb540a116cf5e431e6a2200e01818a6be))
+
 ## [1.0.4](https://github.com/tonalisk-labs/kit/compare/v1.0.3...v1.0.4) (2026-11-13)
 
 
