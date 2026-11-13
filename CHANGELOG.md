@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.4](https://github.com/tonalisk-labs/kit/compare/v1.0.3...v1.0.4) (2026-11-13)
+
+
+### Bug Fixes
+
+* **ci:** a release is a draft until its files and package are in place ([#12](https://github.com/tonalisk-labs/kit/issues/12)) ([f29529f](https://github.com/tonalisk-labs/kit/commit/f29529fd6b5542e0e0a94eac10e1b5cadec8f444))
+* **testing:** kit-test's timed phase holds the machine's CPU gate whole ([#14](https://github.com/tonalisk-labs/kit/issues/14)) ([b0de96c](https://github.com/tonalisk-labs/kit/commit/b0de96c5ac0cd91c74cb3ba51b5c2ac366e8cf61))
+
 ## [1.0.3](https://github.com/tonalisk-labs/kit/compare/v1.0.2...v1.0.3) (2026-11-12)
 
 
