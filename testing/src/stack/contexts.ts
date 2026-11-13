@@ -1,5 +1,3 @@
-import type { Socket } from 'node:net';
-
 import { CONTEXT_COOKIE, profileOf } from '../network.ts';
 import type { Link } from './shaping.ts';
 
@@ -10,8 +8,8 @@ export interface EdgeContext {
   /** Both directions, shared by all its connections and streams. The profile can change. */
   readonly up: Link;
   readonly down: Link;
-  /** Its upgraded connections (WebSockets), client and upstream sides. */
-  readonly live: Set<Socket>;
+  /** Its upgraded connections (WebSockets), each by the call that drops it as a lost link would. */
+  readonly live: Set<() => void>;
   /** How long the edge holds its requests for a pathname before passing them on, in ms, as a
    *  slow origin answers them; none by default. */
   readonly delays: Map<string, number>;
@@ -210,10 +208,10 @@ const throttled = (context: EdgeContext, profile: EdgeContext['up']['profile']):
   return 204;
 };
 
-/** Cuts every connection a context has open. */
+/** Drops every connection a context has open. */
 const dropped = (context: EdgeContext | undefined): number => {
-  for (const socket of context === undefined ? [] : context.live) {
-    socket.destroy();
+  for (const drop of context === undefined ? [] : [...context.live]) {
+    drop();
   }
   return 204;
 };
