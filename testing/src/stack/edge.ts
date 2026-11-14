@@ -5,7 +5,7 @@ import type { Socket } from 'node:net';
 import { pipeline, type Readable, type Transform } from 'node:stream';
 
 import { CONTEXT_COOKIE } from '../network.ts';
-import { answerFault, type Outgoing, writeHead } from './answers.ts';
+import { answerFault, left, type Outgoing, writeHead } from './answers.ts';
 import {
   CONTROL_PREFIX,
   contextOf,
@@ -215,7 +215,7 @@ const answerWith =
     }
     after(wait, () => {
       // The browser may have gone (a closed tab, a navigation) before the answer came.
-      if (outgoing.destroyed || outgoing.headersSent) {
+      if (left(outgoing) || outgoing.headersSent) {
         body.destroy();
         return;
       }
@@ -224,13 +224,13 @@ const answerWith =
     });
   };
 
-/** A failed upstream is logged whatever its error, as only browsers abandon: a 502 while nothing
- *  was sent, else a reset with the error, as production's, since a plain end reads as whole. */
+/** An upstream failing while its browser waits is logged: a 502 if nothing was sent, else a reset,
+ *  as a plain end reads as whole. A browser gone first cut it in leaving, which is no fault. */
 const failWith = (outgoing: Outgoing, error: Error): void => {
-  console.error(`edge proxy: upstream ${error.message}`);
-  if (outgoing.destroyed) {
+  if (left(outgoing)) {
     return;
   }
+  console.error(`edge proxy: upstream ${error.message}`);
   if (outgoing.headersSent) {
     outgoing.destroy(error);
   } else {
@@ -275,7 +275,7 @@ const proxy =
     const body = shaper(link);
     pipeline(incoming, body, report);
     after(wait + heldMs(context, incoming.url ?? '/'), () => {
-      if (outgoing.destroyed) {
+      if (left(outgoing)) {
         return;
       }
       const owed = faultFor(context, incoming.method ?? 'GET', incoming.url ?? '/');
