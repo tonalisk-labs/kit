@@ -41,6 +41,10 @@ naming:
     constantPattern: '[A-Z][A-Za-z0-9]*'
 
 style:
+  # It wraps a call that follows a multiline argument list onto a line of its own, where
+  # ktlint's chain-method-continuation keeps it on the list's closing line: ktlint's is kept.
+  CascadingCallWrapping:
+    active: false
   # The line every tonalisk-labs file keeps to (.editorconfig, oxfmt, SwiftLint, rustfmt).
   MaxLineLength:
     maxLineLength: 100
