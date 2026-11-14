@@ -51,8 +51,31 @@ const saved = async (name: string, png: Buffer): Promise<string> => {
   return file;
 };
 
-const wholePage = async (page: Page): Promise<Buffer> =>
-  page.screenshot({ fullPage: true, animations: 'disabled' });
+/** Once Chromium has drawn the page as it now stands: a second frame has begun, so the first was
+ *  drawn. A screenshot copies the frame last drawn, and a change may have none drawn yet. */
+const drawn = async (page: Page): Promise<void> => {
+  await page.evaluate(
+    async () =>
+      new Promise<void>((resolve) => {
+        globalThis.requestAnimationFrame(() => {
+          globalThis.requestAnimationFrame(() => {
+            resolve();
+          });
+        });
+      }),
+  );
+};
+
+const wholePage = async (page: Page): Promise<Buffer> => {
+  await drawn(page);
+  return page.screenshot({ fullPage: true, animations: 'disabled' });
+};
+
+/** The viewport's shot, once drawn as the page now stands. */
+const viewportShot = async (page: Page): Promise<Buffer> => {
+  await drawn(page);
+  return page.screenshot({ animations: 'disabled' });
+};
 
 await test('a touch page taller than its viewport is captured as the phone lays it out', async () => {
   const browser = await chromium.launch();
@@ -224,12 +247,12 @@ const firstAndRepainted = async (browser: Browser): Promise<string> => {
     dialog.showModal();
   });
   await untilStill(page);
-  const first = await saved('first.png', await page.screenshot({ animations: 'disabled' }));
+  const first = await saved('first.png', await viewportShot(page));
   await page.emulateMedia({ colorScheme: 'dark' });
   await untilStill(page);
   await page.emulateMedia({ colorScheme: 'light' });
   await untilStill(page);
-  const repainted = await saved('again.png', await page.screenshot({ animations: 'disabled' }));
+  const repainted = await saved('again.png', await viewportShot(page));
   return diffSummary(first, repainted);
 };
 

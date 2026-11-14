@@ -12,6 +12,7 @@ import {
   CRASH_ATTACHMENT,
   crashReportFor,
   crashReportOf,
+  reportsKnown,
 } from '../src/browser-crash.ts';
 
 /** The process a crash report names; `reportText` writes the report as macOS does, a header line
@@ -82,11 +83,10 @@ await test('a file that is no crash report, or reports no exception, is none', (
 
 await test("the report of a process the worker started is taken once it's written, never another's", async () => {
   await using folder = await reportsFolder();
-  const since = Date.now();
   const ended = new AbortController();
   const waited = crashReportFor({
     parents: [4],
-    since,
+    known: reportsKnown([folder.path]),
     folders: [folder.path],
     signal: ended.signal,
   });
@@ -104,6 +104,7 @@ await test("the report of a process the worker started is taken once it's writte
 
 await test("the browser's own report is taken ahead of its helper's, whichever name sorts first", async () => {
   await using folder = await reportsFolder();
+  const known = reportsKnown([folder.path]);
   // A helper's parent is the browser, a process the worker started; the browser's is the worker.
   await writeReport(folder.path, { pid: 41, parentPid: 40, procName: 'Chromium Helper (GPU)' });
   const browsers = await writeReport(folder.path, { pid: 40, parentPid: 4, procName: 'Chromium' });
@@ -111,7 +112,7 @@ await test("the browser's own report is taken ahead of its helper's, whichever n
   ended.abort();
   const report = await crashReportFor({
     parents: [4, 40],
-    since: Date.now() - 60_000,
+    known,
     folders: [folder.path],
     signal: ended.signal,
   });
@@ -120,13 +121,11 @@ await test("the browser's own report is taken ahead of its helper's, whichever n
 
 await test('a report written before the wait began is not taken, and the bound ends the wait', async () => {
   await using folder = await reportsFolder();
-  const old = await writeReport(folder.path, { pid: 50, parentPid: 5, procName: 'firefox' });
-  const before = new Date(Date.now() - 60_000);
-  await utimes(old, before, before);
+  await writeReport(folder.path, { pid: 50, parentPid: 5, procName: 'firefox' });
   const ended = new AbortController();
   const waited = crashReportFor({
     parents: [5],
-    since: Date.now(),
+    known: reportsKnown([folder.path]),
     folders: [folder.path],
     signal: ended.signal,
   });
@@ -212,6 +211,29 @@ await test("a report whose parent the worker had started, as WebKit's launcher i
   } finally {
     await server.close();
   }
+});
+
+await test("a report stamped before its watch began, as Linux's coarser clock can stamp one, is the crash all the same", async () => {
+  await using folder = await reportsFolder();
+  const watched = browserWatch({ folders: [folder.path], waitMs: 60_000, reports: true });
+  const testInfo = attachments();
+  const report = { file: '' };
+  const body = async (since: number): Promise<void> => {
+    report.file = await writeReport(folder.path, {
+      pid: 60,
+      parentPid: process.pid,
+      procName: 'firefox',
+    });
+    // Written after the watch began, stamped a second before it: no clock may decide it's old.
+    const stamped = new Date(since - 1000);
+    await utimes(report.file, stamped, stamped);
+  };
+  const lost = { isConnected: (): boolean => false };
+  await assert.rejects(
+    watched({ browser: lost, browserName: 'firefox', connectOptions: undefined }, body, testInfo),
+    /^Error: firefox crashed mid-test: firefox EXC_BAD_ACCESS SIGSEGV .* \(pid 60, report /u,
+  );
+  assert.deepEqual(testInfo.kept, [`${CRASH_ATTACHMENT}: ${report.file}`]);
 });
 
 await test('a browser still connected when its test ends fails nothing', async () => {
