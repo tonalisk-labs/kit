@@ -42,8 +42,9 @@ export interface Coordinates {
 
 interface Running extends Service {
   readonly coordinates: Coordinates;
-  /** Stops the backend gracefully (SIGTERM, awaited) and starts it again, when there is one. */
-  readonly restartBackend: (() => Promise<void>) | undefined;
+  /** Stops the backend gracefully (SIGTERM, awaited) and starts it again, when there is one,
+   *  resolving with the requests the edge refused meanwhile. */
+  readonly restartBackend: (() => Promise<number>) | undefined;
 }
 
 interface Launch {
@@ -52,7 +53,7 @@ interface Launch {
   readonly services: Service[];
   readonly signal: AbortSignal;
   /** The backend's restart, once it has started. */
-  readonly restarts: (() => Promise<void>)[];
+  readonly restarts: (() => Promise<number>)[];
   /** The origin the backend takes as its own, when browsers reach the edge by another name. */
   readonly publicOrigin: string | undefined;
   /** The local CA that signs every edge, so a browser holding it trusts and caches as in
@@ -266,9 +267,7 @@ const serveApp = async (
     await restartable(async () => startBackend(executable, environment, launch.signal)),
   );
   // The edge counts what the backend refuses while it restarts, rather than saying it as a fault.
-  launch.restarts.push(async () => {
-    await edge.whileDown(port, backendService.restart);
-  });
+  launch.restarts.push(async () => edge.whileDown(port, backendService.restart));
   return coordinatesOf(launch, backend, wiring);
 };
 
