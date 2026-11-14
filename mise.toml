@@ -209,7 +209,8 @@ git archive --format=tar.gz --prefix=template/ -o out/template.tar.gz HEAD:templ
 '''
 
 # The release's npm step, dry, over the same tarball: npm reads its path as a file and the package
-# as it would publish it. The release adds provenance, which needs its job's OIDC token.
+# as it would publish it. Offline, from an empty cache, it never asks npm which versions exist, so
+# the check doesn't change when a release lands: the release's own publish judges the version.
 [tasks.publishable]
 description = "release.yml's npm publish, as a dry run over the packed tarball"
 depends = ["artifacts"]
@@ -219,8 +220,11 @@ set -euo pipefail
 command='npm publish ./out/*.tgz --provenance --access public --json --loglevel=warn'
 grep -q -F "$command" .github/workflows/release.yml \
   || { echo "publishable: release.yml's npm step is no longer $command"; exit 1; }
+cache=$(mktemp -d)
+trap 'rm -rf "$cache"' EXIT
 # A dry run warns that nobody is logged in: the placeholder stands for the release's OIDC token.
 npm publish ./out/*.tgz --dry-run --access public --json --loglevel=warn \
+  --offline --cache "$cache" --update-notifier=false \
   --@tonalisk-labs:registry=https://registry.npmjs.org '--//registry.npmjs.org/:_authToken=dry-run' \
   | jq -r '.[] | select(.id != null) | "publishable \(.id): \(.size) bytes, \(.integrity)"'
 '''
