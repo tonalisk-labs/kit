@@ -144,8 +144,10 @@ for file in ci.yml release.yml; do
   grep -q -E "^    uses: tonalisk-labs/kit/\.github/workflows/[a-z]+\.yml@[0-9a-f]{40} # $version$" \
     "$work/public/.github/workflows/$file" || fail "$file doesn't pin kit's workflow to a commit"
 done
-grep -q -E '^  group: ci-[$][{][{] github[.]ref [}][}]$' "$work/public/.github/workflows/ci.yml" \
-  || fail "ci.yml's concurrency group lost its expression"
+for file in ci.yml release.yml; do
+  grep -q -E '^  group: [$][{][{] github[.]workflow [}][}]-[$][{][{] github[.]run_id [}][}]$' \
+    "$work/public/.github/workflows/$file" || fail "$file's concurrency group lost its expression"
+done
 '''
 [tasks.downstream]
 description = "This build of kit under each site's own check, from the repos beside kit"

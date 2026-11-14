@@ -13,6 +13,8 @@ mise generate git-pre-commit --write --hook=pre-push --task=check
 
 - **Commits and pull request titles** follow [Conventional Commits](https://www.conventionalcommits.org).
   A pull request is squash-merged under its title, which becomes one line of the changelog.
+- **Nothing merges to `main` while a release run is in flight.** Each run goes to its end, never
+  cancelled, so two could overlap.
 - **Comments** say only what the code can't: why it's done this way, an invariant, a non-obvious
   edge case, or an outside constraint with its reference, in 2 lines at most for a function or
   type. If a comment explains what code does, rename or simplify the code instead.

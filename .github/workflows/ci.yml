@@ -14,8 +14,8 @@ defaults:
     shell: bash
 
 concurrency:
-  group: ci-${{ github.ref }}
-  # A newer push waits for a running check, never cut short, and replaces one still queued.
+  # Each run its own group, so a newer push never cancels another, queued or running.
+  group: ${{ github.workflow }}-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
