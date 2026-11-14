@@ -265,7 +265,10 @@ const serveApp = async (
   const backendService = keep(
     await restartable(async () => startBackend(executable, environment, launch.signal)),
   );
-  launch.restarts.push(backendService.restart);
+  // The edge counts what the backend refuses while it restarts, rather than saying it as a fault.
+  launch.restarts.push(async () => {
+    await edge.whileDown(port, backendService.restart);
+  });
   return coordinatesOf(launch, backend, wiring);
 };
 
