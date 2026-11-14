@@ -9,8 +9,8 @@ on:
 permissions: {}
 
 concurrency:
-  group: ci-{% raw %}${{ github.ref }}{% endraw %}
-  # A newer push waits for a running check, never cut short, and replaces one still queued.
+  # Each run its own group, so a newer push never cancels another, queued or running.
+  group: {% raw %}${{ github.workflow }}-${{ github.run_id }}{% endraw %}
   cancel-in-progress: false
 
 # kit's workflow bounds each of its jobs with timeout-minutes, which a calling job can't set.

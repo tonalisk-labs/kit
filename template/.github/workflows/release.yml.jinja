@@ -7,7 +7,8 @@ on:
 permissions: {}
 
 concurrency:
-  group: release
+  # Each run its own group: a shared one keeps a single run waiting and cancels any older one.
+  group: {% raw %}${{ github.workflow }}-${{ github.run_id }}{% endraw %}
   cancel-in-progress: false
 
 # kit's workflow bounds each of its jobs with timeout-minutes, which a calling job can't set.
