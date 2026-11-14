@@ -21,12 +21,12 @@ export const pen = (): CanvasRenderingContext2D => {
   return made;
 };
 
-/** A CSS colour as 8-bit sRGB channels and an alpha from 0 to 1. */
+/** A CSS colour as 8-bit sRGB channels and an alpha from 0 to 1; one the page can't parse reads as
+ *  black, where the canvas would keep the colour painted before it. */
 export const rgba = (colour: string): Rgba => {
   const context = pen();
   context.clearRect(0, 0, 1, 1);
-  context.fillStyle = '#000';
-  context.fillStyle = colour;
+  context.fillStyle = globalThis.CSS.supports('color', colour) ? colour : '#000';
   context.fillRect(0, 0, 1, 1);
   const [red = 0, green = 0, blue = 0, alpha = 0] = context.getImageData(0, 0, 1, 1).data;
   return [red, green, blue, alpha / 255];
