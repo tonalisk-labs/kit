@@ -24,7 +24,12 @@ export {
   STRIPE_HOSTED,
 } from './stripe-checkout.ts';
 export { startTarget, type Coordinates } from './stack/stack.ts';
-export { buildBackend, startBackend } from './stack/backend.ts';
+export {
+  buildBackend,
+  buildBackendWith,
+  startBackend,
+  type BackendBuild,
+} from './stack/backend.ts';
 export { startPostgres } from './stack/postgres.ts';
 export { freePort } from './stack/ports.ts';
 export { leftovers } from './stack/leftovers.ts';
