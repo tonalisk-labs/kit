@@ -12,7 +12,8 @@ await using repo = await mkdtempDisposable(path.join(tmpdir(), 'sites-testing-sl
 await mkdir(path.join(repo.path, 'site', 'tests'), { recursive: true });
 await writeFile(path.join(repo.path, 'site', 'astro.config.mjs'), '');
 await writeFile(path.join(repo.path, 'site', 'tests', 'a.spec.ts'), '');
-// The repo the config reads is fixed as its module loads.
+// The repo the config reads is fixed as its module loads, and holds a package.json as a repo does.
+await writeFile(path.join(repo.path, 'package.json'), '{}');
 process.env['KIT_ROOT'] = repo.path;
 const { defineTests } = await import('../src/config.ts');
 
