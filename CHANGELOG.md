@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.1.0](https://github.com/tonalisk-labs/kit/compare/v1.0.7...v1.1.0) (2026-11-14)
+
+
+### Features
+
+* **testing:** a backend built with a named Cargo profile, and the template's profiling profile ([#34](https://github.com/tonalisk-labs/kit/issues/34)) ([168bca9](https://github.com/tonalisk-labs/kit/commit/168bca919919bf29da13d755f630008128e85b17))
+* **testing:** kit-perf-audit, the release audit, and how to profile ([#35](https://github.com/tonalisk-labs/kit/issues/35)) ([37ca9b3](https://github.com/tonalisk-labs/kit/commit/37ca9b3e37f1ae47255c044b20141543ab241713))
+
+
+### Bug Fixes
+
+* **testing:** a colour read back from the canvas is set once, black where the page can't parse it ([#41](https://github.com/tonalisk-labs/kit/issues/41)) ([8918f35](https://github.com/tonalisk-labs/kit/commit/8918f35e51e4bc472dcdf8eedfbd933d80992f12))
+* **testing:** a crash report is new by its folder's listing, not its file's stamp ([#32](https://github.com/tonalisk-labs/kit/issues/32)) ([7582a5b](https://github.com/tonalisk-labs/kit/commit/7582a5b1316f9b26b1f7424652ccd3afc0d46785))
+* **testing:** an upstream's failure is logged on one line, whatever its message holds ([#40](https://github.com/tonalisk-labs/kit/issues/40)) ([221fcd6](https://github.com/tonalisk-labs/kit/commit/221fcd6510b9a5e1cb09210d5bab232efc03bf5b))
+* **testing:** KIT_ROOT is taken only where it names a folder holding a package.json ([#42](https://github.com/tonalisk-labs/kit/issues/42)) ([15e8f76](https://github.com/tonalisk-labs/kit/commit/15e8f767ca5164cb5c113925ca0029b56302b609))
+* **testing:** the budgets file is read without a check first, so it can't change between ([#38](https://github.com/tonalisk-labs/kit/issues/38)) ([7d92479](https://github.com/tonalisk-labs/kit/commit/7d9247923187036579ed1c804154cf09c9f722df))
+
 ## [1.0.7](https://github.com/tonalisk-labs/kit/compare/v1.0.6...v1.0.7) (2026-11-14)
 
 
