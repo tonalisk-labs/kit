@@ -36,9 +36,6 @@ naming:
   # A test's name is the sentence it proves, which takes more than 30 characters, in any suite.
   FunctionMaxLength:
     excludes: ['**/test/**', '**/*Test/**', '**/testFixtures/**']
-  # Compose's own constants, such as a CompositionLocal, are PascalCase.
-  TopLevelPropertyNaming:
-    constantPattern: '[A-Z][A-Za-z0-9]*'
 
 style:
   # It wraps a call that follows a multiline argument list onto a line of its own, where
