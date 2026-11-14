@@ -74,6 +74,15 @@ await test('a profile or feature Cargo would refuse is refused before anything r
   }
 });
 
+await test('a package Cargo would refuse is refused before anything runs', () => {
+  for (const crate of ['-x', '--config=x', 'a b', 'x/y', '2fa', '', 'a;b', '$(id)']) {
+    assert.throws(() => buildArguments(crate, {}), /Cargo takes no package named/u);
+  }
+  for (const crate of ['backend', 'astronotes-server', 'kit_server', '_private', 'Übung']) {
+    assert.ok(buildArguments(crate, {}).includes(crate), crate);
+  }
+});
+
 /** A `cargo` that records its arguments and reports one built binary, first on PATH while
  *  `body` runs; this file's own process is the only one that sees it. */
 const withCargo = async (body: (recorded: string) => Promise<void>): Promise<void> => {

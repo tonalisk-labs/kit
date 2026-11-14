@@ -53,6 +53,19 @@ const RESERVED_PROFILES = new Set([
 /** A feature's name as Cargo takes one (`validate_feature_name`), so no `/` and no `dep:`. */
 const FEATURE_NAME = /^[\p{XID_Start}_0-9][\p{XID_Continue}+.-]*$/u;
 
+/** A package's name as Cargo takes one (`validate_package_name`), so no leading digit or "-". */
+const PACKAGE_NAME = /^[\p{XID_Start}_][\p{XID_Continue}-]*$/u;
+
+const packageNamed = (crate: string): string => {
+  if (!PACKAGE_NAME.test(crate)) {
+    throw new Error(
+      `Cargo takes no package named ${JSON.stringify(crate)}: a package's name starts with a ` +
+        'letter or "_", then letters, digits, "_" and "-"',
+    );
+  }
+  return crate;
+};
+
 const profileNamed = (profile: string): string => {
   const lower = profile.toLowerCase();
   if (!PROFILE_NAME.test(profile) || RESERVED_PROFILES.has(lower) || lower.startsWith('cargo')) {
@@ -84,7 +97,7 @@ export const buildArguments = (
   '--profile',
   profileNamed(profile),
   '--package',
-  crate,
+  packageNamed(crate),
   ...features.flatMap((feature) => ['--features', featureNamed(feature)]),
   '--message-format=json-render-diagnostics',
 ];
