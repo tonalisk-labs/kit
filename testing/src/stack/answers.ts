@@ -8,6 +8,11 @@ import { type Fault, faultAnswer } from './contexts.ts';
 /** An answer under way, an HTTP/1.1 exchange's or an HTTP/2 stream's. */
 export type Outgoing = ServerResponse | Http2ServerResponse;
 
+/** Whether the browser has left the answer. HTTP/2's compatibility answer has no `destroyed` of its
+ *  own at run time, whatever its type says, so its stream's is read. */
+export const left = (outgoing: Outgoing): boolean =>
+  outgoing instanceof Http2ServerResponse ? outgoing.stream.destroyed : outgoing.destroyed;
+
 /** Sends an answer's head in either protocol; HTTP/2 has no reason phrase. */
 export const writeHead = (
   outgoing: Outgoing,
