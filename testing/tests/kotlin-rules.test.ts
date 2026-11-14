@@ -38,6 +38,10 @@ await test('code at each elite limit passes every detekt rule', () => {
   assert.deepEqual(detekt('meets'), { status: 0, rules: [] });
 });
 
+await test("a test suite's tests are named as the sentences they prove", () => {
+  assert.deepEqual(detekt('suites'), { status: 0, rules: [] });
+});
+
 await test('code one past each elite limit fails for that limit alone', () => {
   assert.deepEqual(detekt('exceeds'), {
     status: 2,
@@ -45,7 +49,7 @@ await test('code one past each elite limit fails for that limit alone', () => {
   });
 });
 
-await test("ktlint, with kit's editorconfig, finds nothing in either fixture", () => {
+await test("ktlint, with kit's editorconfig, finds nothing in any fixture", () => {
   const run = spawnSync(
     'ktlint',
     [`--editorconfig=${KIT}/rules/ktlint.editorconfig`, `${FIXTURES}/**/*.kt`],
