@@ -1,11 +1,10 @@
-import { randomInt } from 'node:crypto';
 import { once } from 'node:events';
 import { Agent, type IncomingHttpHeaders, type IncomingMessage, request } from 'node:http';
 import { createSecureServer, type Http2SecureServer, Http2ServerRequest } from 'node:http2';
 import type { Socket } from 'node:net';
 import { pipeline, type Readable, type Transform } from 'node:stream';
 
-import { CONTEXT_COOKIE, type NetworkProfile } from '../network.ts';
+import { CONTEXT_COOKIE } from '../network.ts';
 import { answerFault, type Outgoing, writeHead } from './answers.ts';
 import {
   CONTROL_PREFIX,
@@ -16,6 +15,7 @@ import {
   steer,
 } from './contexts.ts';
 import { encoded, forwardedNoneMatch } from './encode.ts';
+import { hold, linger, pipeDown } from './live.ts';
 import { CONNECTS_AT_ONCE } from './ports.ts';
 import { type Service, withoutIpv6 } from './process.ts';
 import { AHEAD_BYTES, headDelayMs, type Link, shaper } from './shaping.ts';
@@ -306,31 +306,6 @@ const headOf = (answer: IncomingMessage, close: boolean): string => {
 
 const BAD_GATEWAY = 'HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\nContent-Length: 0\r\n\r\n';
 
-const lifetimeOf = (profile: NetworkProfile | undefined): NetworkProfile['socketLifetimeMs'] =>
-  profile === undefined ? undefined : profile.socketLifetimeMs;
-
-/** Holds an upgraded connection's sockets as its context's live ones; on a lossy profile both drop
- *  after a lifetime drawn from it, and that timer is the emulated fault. */
-const hold = (sockets: readonly Socket[], context: EdgeContext | undefined): void => {
-  if (context === undefined) {
-    return;
-  }
-  const lifetime = lifetimeOf(context.down.profile);
-  const drop = (): void => {
-    for (const socket of sockets) {
-      socket.destroy();
-    }
-  };
-  const timer = lifetime === undefined ? undefined : setTimeout(drop, randomInt(...lifetime));
-  for (const socket of sockets) {
-    context.live.add(socket);
-    socket.once('close', () => {
-      clearTimeout(timer);
-      context.live.delete(socket);
-    });
-  }
-};
-
 interface Upgrade {
   readonly incoming: IncomingMessage;
   readonly client: Socket;
@@ -352,13 +327,13 @@ const upgradeHeaders = (incoming: IncomingMessage, context: EdgeContext | undefi
   return headers;
 };
 
-/** As `failWith`: a 502 while nothing was sent, else the connection is cut. */
+/** As `failWith`: a 502 while nothing was sent, else the browser's leg ends, lingering. */
 const failUpgrade = (client: Socket, down: Transform, answered: boolean): void => {
   if (client.destroyed) {
     return;
   }
   if (answered) {
-    client.destroy();
+    linger(client);
   } else {
     down.end(BAD_GATEWAY);
   }
@@ -381,7 +356,7 @@ const send = (router: Router, { incoming, client, up, down, context }: Upgrade):
     down.write(rest);
     pipeline(up, socket, report);
     pipeline(socket, down, report);
-    hold([client, socket], context);
+    hold(client, socket, context);
   });
   upstream.on('response', (answer: IncomingMessage) => {
     answered.now = true;
@@ -409,7 +384,7 @@ const upgrade =
     client.on('error', report);
     up.write(head);
     client.pipe(up);
-    pipeline(down, client, report);
+    pipeDown(down, client);
     const bytes = headBytes(incoming.rawHeaders);
     after(headDelayMs(upOf(context), bytes, owedRtts(router, incoming)), () => {
       send(router, { incoming, client, up, down, context });
