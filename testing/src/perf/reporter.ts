@@ -13,6 +13,7 @@ import type {
 
 import { isObject } from '../unknown.ts';
 import { ceiling, minimumScore } from './budgets.ts';
+import { SlowFiles } from './slow-files.ts';
 import {
   FAILURE_ATTACHMENT,
   isMeasured,
@@ -244,9 +245,22 @@ const pageSnapshot = (result: TestResult): string[] =>
       return shown;
     });
 
-/** Prints each failure's assertions and page, then each target's journeys and steps (median ± SD,
- *  share of "good"); it only reports, and in GitHub Actions also writes the run's summary. */
+/** What a config hands the reporter: the setup's file, which the slow-file report leaves out. */
+export interface StdoutOptions {
+  readonly setupFile?: string;
+}
+
+/** Prints each failure's assertions and page, the slow files, then each target's journeys and steps
+ *  (median ± SD, share of "good"); it only reports, and in GitHub Actions writes a run's summary. */
 export default class StdoutReporter implements Reporter {
+  readonly #setupFile: string | undefined;
+
+  #slowFiles = new SlowFiles('');
+
+  public constructor({ setupFile }: StdoutOptions = {}) {
+    this.#setupFile = setupFile;
+  }
+
   /** The run's summary page, in Markdown, written once the run ends. */
   readonly #summary: string[] = [];
 
@@ -291,6 +305,7 @@ export default class StdoutReporter implements Reporter {
   readonly #runErrors: string[] = [];
 
   public onBegin(config: FullConfig, suite: Suite): void {
+    this.#slowFiles = new SlowFiles(config.rootDir);
     this.#projects = config.projects;
     this.#suite = suite;
   }
@@ -311,6 +326,10 @@ export default class StdoutReporter implements Reporter {
   }
 
   public onTestEnd(test: TestCase, result: TestResult): void {
+    const { file } = test.location;
+    if (file !== this.#setupFile) {
+      this.#slowFiles.add(test.titlePath()[1] ?? '', file, result);
+    }
     for (const attachment of result.attachments) {
       const journey = attachedJson(attachment, JOURNEY_ATTACHMENT);
       if (isJourneyMeasure(journey)) {
@@ -391,6 +410,10 @@ export default class StdoutReporter implements Reporter {
   }
 
   public async onEnd(result: FullResult): Promise<{ status: FullResult['status'] } | undefined> {
+    const slow = this.#slowFiles.report();
+    if (slow.length > 0) {
+      console.log(slow.join('\n'));
+    }
     this.#printJourneys();
     if (this.#measured.size > 0) {
       this.#printSteps();

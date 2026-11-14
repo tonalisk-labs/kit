@@ -28,7 +28,7 @@ const ACTIONS: readonly Action[] = ['start', 'stop', 'restart'];
 
 interface Started extends Service {
   readonly env: Record<string, string>;
-  readonly restart?: (() => Promise<void>) | undefined;
+  readonly restart?: (() => Promise<number>) | undefined;
 }
 
 interface Entry {
@@ -68,7 +68,7 @@ const stopKey = async (entries: Map<string, Entry>, key: string): Promise<void> 
 
 /** Restarts a running target's backend, its entry read again once started, as a stop meanwhile
  *  leaves nothing to restart. */
-const restartKey = async (entries: Map<string, Entry>, key: string): Promise<void> => {
+const restartKey = async (entries: Map<string, Entry>, key: string): Promise<number> => {
   const entry = entries.get(key);
   const running = entry === undefined ? undefined : await entry.started;
   if (running === undefined || entries.get(key) !== entry) {
@@ -77,7 +77,7 @@ const restartKey = async (entries: Map<string, Entry>, key: string): Promise<voi
   if (running.restart === undefined) {
     throw new Error(`${key} runs no backend to restart`);
   }
-  await running.restart();
+  return running.restart();
 };
 
 const locks = stackLocks();
@@ -89,8 +89,7 @@ const answer = async ({ entries, turns }: Hosted, action: Action, key: string): 
     return {};
   }
   if (action === 'restart') {
-    await restartKey(entries, key);
-    return {};
+    return { refused: String(await restartKey(entries, key)) };
   }
   const existing = entries.get(key);
   if (existing !== undefined) {

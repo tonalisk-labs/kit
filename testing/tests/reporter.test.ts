@@ -60,6 +60,7 @@ await test('a Markdown table escapes the pipes in its cells', () => {
 /** A failed test as the reporter is handed one: its title path, and a soft assertion failed. */
 const failedTest = {
   titlePath: (): string[] => ['', 'astronotes', 'journeys.spec.ts', 'signs in at 2,000 notes'],
+  location: { file: '/repo/journeys.spec.ts' },
   parent: { project: (): undefined => undefined },
   outcome: (): string => 'unexpected',
 };
@@ -74,8 +75,17 @@ await test('in GitHub Actions the failed assertions reach the run’s summary pa
     const reporter = new StdoutReporter();
     const suite = { allTests: (): (typeof failedTest)[] => [failedTest] };
     // The fakes hold only what the reporter reads of Playwright's config, suite, test and result.
-    Reflect.apply(reporter.onBegin.bind(reporter), undefined, [{ projects: [] }, suite]);
-    const result = { status: 'failed', attachments: [], steps: [failed('LCP', 'over budget')] };
+    Reflect.apply(reporter.onBegin.bind(reporter), undefined, [
+      { projects: [], rootDir: '/repo' },
+      suite,
+    ]);
+    const result = {
+      status: 'failed',
+      attachments: [],
+      steps: [failed('LCP', 'over budget')],
+      duration: 1000,
+      workerIndex: 0,
+    };
     Reflect.apply(reporter.onTestEnd.bind(reporter), undefined, [failedTest, result]);
     await reporter.onEnd({ status: 'failed', startTime: new Date(), duration: 0 });
   } finally {

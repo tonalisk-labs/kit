@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.7](https://github.com/tonalisk-labs/kit/compare/v1.0.6...v1.0.7) (2026-11-14)
+
+
+### Bug Fixes
+
+* **ci:** kit's publish dry run never asks npm which versions exist, so a release doesn't break the check ([#24](https://github.com/tonalisk-labs/kit/issues/24)) ([7e3b014](https://github.com/tonalisk-labs/kit/commit/7e3b01471514a8430519f68ff954e2db9255bd6f))
+* **ci:** the release's SBOM names its repository and version, not the folder syft read ([#31](https://github.com/tonalisk-labs/kit/issues/31)) ([86339de](https://github.com/tonalisk-labs/kit/commit/86339de961b0ca580dd64e2d5d23dedd40eaab13))
+* **testing:** a browser leaving mid-upload is no upstream fault, as the edge reads its leaving ([#28](https://github.com/tonalisk-labs/kit/issues/28)) ([9e32d0d](https://github.com/tonalisk-labs/kit/commit/9e32d0d17f77180fcbcea93612bd120aa4f42f14))
+* **testing:** a test ends once it has stood still for 132 s, under a one-hour backstop ([#30](https://github.com/tonalisk-labs/kit/issues/30)) ([12cb9d6](https://github.com/tonalisk-labs/kit/commit/12cb9d685ec29e2a1240720b1551e7546d3dc048))
+* **testing:** refusals while the stack restarts an upstream are counted, not said, and any other is said once ([#29](https://github.com/tonalisk-labs/kit/issues/29)) ([b554677](https://github.com/tonalisk-labs/kit/commit/b55467767cf81dba513f5fa237df836eddc20447))
+* **testing:** slow files are named past a target's setup, whose one test is its build ([#26](https://github.com/tonalisk-labs/kit/issues/26)) ([37f0ae1](https://github.com/tonalisk-labs/kit/commit/37f0ae101261ecd9bc6e735807897b4478a125fa))
+* **testing:** the edge ends a dropped live connection with a lingering close, never a reset ([#27](https://github.com/tonalisk-labs/kit/issues/27)) ([c392ebc](https://github.com/tonalisk-labs/kit/commit/c392ebc07292bcdb18b6b618944ec675fb2b28f5))
+
 ## [1.0.6](https://github.com/tonalisk-labs/kit/compare/v1.0.5...v1.0.6) (2026-11-13)
 
 

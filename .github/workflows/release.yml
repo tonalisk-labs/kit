@@ -63,6 +63,7 @@ jobs:
     outputs:
       created: ${{ steps.please.outputs.release_created }}
       tag: ${{ steps.please.outputs.tag_name }}
+      version: ${{ steps.please.outputs.version }}
     steps:
       # `required: true` checks only that the caller passes the name, never that it has a value.
       - name: The release App's key has a value
@@ -129,7 +130,12 @@ jobs:
         run: npx playwright install --with-deps
       - run: mise run release-check
       - run: mise run artifacts
+      # The SBOM names what it describes, the repository at the release's version, not the folder
+      # syft read it from.
       - uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        env:
+          SYFT_SOURCE_NAME: ${{ github.repository }}
+          SYFT_SOURCE_VERSION: ${{ needs.please.outputs.version }}
         with:
           output-file: out/sbom.spdx.json
           upload-artifact: false
