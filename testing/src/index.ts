@@ -59,6 +59,7 @@ export {
   setNetwork,
   type EdgeFault,
 } from './edge-client.ts';
+export type { Reading, Readings } from './perf/audit.ts';
 export { pageCpuClock } from './perf/cpu.ts';
 export { type Reference, referenceOf, underReference } from './perf/profile.ts';
 export { type FlowOptions, type FlowResult, withFlow } from './perf/lighthouse.ts';

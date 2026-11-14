@@ -20,6 +20,7 @@
     "kit-duplicates": "dist/rules/duplicates.js",
     "kit-lint-styles": "dist/rules/lint-styles.js",
     "kit-mutants-rust": "dist/testing/src/floors/mutants.js",
+    "kit-perf-audit": "dist/testing/src/perf-audit.js",
     "kit-prose": "dist/rules/prose.js",
     "kit-rust-lints": "dist/rules/rust-lints.js",
     "kit-seo": "dist/testing/src/seo-check.js",
