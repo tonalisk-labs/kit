@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
@@ -114,7 +114,7 @@ await test('a name holding shell syntax runs nothing, and a valid one builds as 
       ),
     );
     await Promise.all(refused);
-    await assert.rejects(access(recorded), { code: 'ENOENT' });
+    await assert.rejects(readFile(recorded, 'utf8'), { code: 'ENOENT' });
     const built = buildBackendWith('backend', signal, {
       profile: 'profiling',
       features: ['test-clock'],
