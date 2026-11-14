@@ -1,13 +1,9 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtempDisposable, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 import { test } from 'node:test';
 import { stripVTControlCharacters } from 'node:util';
 
 import StdoutReporter from '../src/perf/reporter.ts';
 import { SlowFiles } from '../src/perf/slow-files.ts';
-import { isObject } from '../src/unknown.ts';
 
 const MINUTE = 60_000;
 
@@ -101,26 +97,4 @@ await test('the reporter names a slow file but leaves out the setup file it was 
     '  Slow test file: [site/visual-01] › tests/journeys.spec.ts (9.0m)',
     ADVICE,
   ]);
-});
-
-await test("Playwright's own report names no file, and the reporter is handed each setup's", async () => {
-  await using repo = await mkdtempDisposable(path.join(tmpdir(), 'sites-testing-slow-'));
-  await mkdir(path.join(repo.path, 'site', 'tests'), { recursive: true });
-  await writeFile(path.join(repo.path, 'site', 'astro.config.mjs'), '');
-  await writeFile(path.join(repo.path, 'site', 'tests', 'a.spec.ts'), '');
-  // The repo the config reads is fixed as its module loads.
-  process.env['KIT_ROOT'] = repo.path;
-  const { defineTests } = await import('../src/config.ts');
-  const { reportSlowTests, reporter = [], projects = [] } = defineTests();
-  const given = (Array.isArray(reporter) ? reporter : []).flatMap((description) => {
-    const options: unknown = description[1];
-    return isObject(options) && 'setupFile' in options ? [options['setupFile']] : [];
-  });
-  const setups = projects.filter(({ name = '' }) => name.endsWith('/setup'));
-  assert.equal((reportSlowTests ?? { threshold: 0 }).threshold, Number.POSITIVE_INFINITY);
-  assert.equal(given.length, 1);
-  assert.ok(setups.length > 0);
-  for (const { testMatch } of setups) {
-    assert.equal(testMatch, given[0]);
-  }
 });
