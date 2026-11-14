@@ -10,7 +10,7 @@ import { parseArgs, styleText } from 'node:util';
 
 import { type Build, overBudget, type SiteSize, type SizeBudget, sizeOf } from './checks/size.ts';
 import { discover, REPO } from './discover.ts';
-import { BUDGETS_ENV, budgetsFile, sizeBudget } from './perf/budgets.ts';
+import { BUDGETS_ENV, budgetsFile, ownBudgets, sizeBudget } from './perf/budgets.ts';
 import { isObject } from './unknown.ts';
 
 const { values } = parseArgs({
@@ -89,7 +89,7 @@ const summary = (rows: readonly (readonly [string, SiteSize, SizeBudget])[]): st
  *  kept as they are. */
 const written = (rows: readonly (readonly [string, SiteSize])[]): void => {
   const file = budgetsFile();
-  const parsed: unknown = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {};
+  const parsed = ownBudgets(file) ?? {};
   const own = isObject(parsed) ? parsed : {};
   const sizes = Object.fromEntries(rows.map(([site, size]) => [site, measured(size)]));
   writeFileSync(file, `${JSON.stringify(Object.assign(own, { sizes }), undefined, 2)}\n`);

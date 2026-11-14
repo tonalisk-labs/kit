@@ -1,9 +1,9 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import KIT_BUDGETS from '../../perf-budgets.json' with { type: 'json' };
 import { REPO } from '../discover.ts';
-import { isObject } from '../unknown.ts';
+import { codeOf, isObject } from '../unknown.ts';
 
 type Ceilings = Readonly<Record<string, number>>;
 
@@ -90,8 +90,6 @@ const isOwnBudgets = (value: unknown): value is Partial<Budgets> =>
 const overlaid = (base: Ceilings, over: Ceilings = {}): Ceilings =>
   Object.fromEntries([...Object.entries(base), ...Object.entries(over)]);
 
-const parse = (file: string): unknown => JSON.parse(readFileSync(file, 'utf8'));
-
 /** The variable naming the repo's budgets file from its root, such as `spec/budgets.json`;
  *  `perf-budgets.json` when unset. */
 export const BUDGETS_ENV = 'KIT_BUDGETS';
@@ -99,6 +97,19 @@ export const BUDGETS_ENV = 'KIT_BUDGETS';
 /** The repo's budgets file. */
 export const budgetsFile = (): string =>
   path.resolve(REPO, process.env[BUDGETS_ENV] ?? 'perf-budgets.json');
+
+/** `file`'s JSON, or undefined where there is no such file: read without a check first, so the
+ *  file can't change between the two. */
+export const ownBudgets = (file: string = budgetsFile()): unknown => {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8'));
+  } catch (error) {
+    if (codeOf(error) === 'ENOENT') {
+      return undefined;
+    }
+    throw error;
+  }
+};
 
 /** The defaults, under the repo's own budgets where it has them. */
 const load = (): Budgets => {
@@ -108,10 +119,10 @@ const load = (): Budgets => {
     throw new TypeError("kit's perf-budgets.json does not hold { minScore, minScores, size, max }");
   }
   const file = budgetsFile();
-  if (!existsSync(file)) {
+  const own = ownBudgets(file);
+  if (own === undefined) {
     return defaults;
   }
-  const own = parse(file);
   if (!isOwnBudgets(own)) {
     throw new TypeError(`${file} does not hold { minScore?, minScores?, sizes?, max?, journeys? }`);
   }
