@@ -10,6 +10,7 @@ import {
   type PlaywrightTestOptions,
   type PlaywrightWorkerArgs,
   type PlaywrightWorkerOptions,
+  type TestInfo,
   type TestType,
 } from '@playwright/test';
 
@@ -38,6 +39,7 @@ import { announceDeadline } from './stack/hold.ts';
 import { claimPort } from './stack/ports.ts';
 import type { Coordinates } from './stack/stack.ts';
 import { browserTrust, trustCa } from './stack/tls.ts';
+import { endStuck, hearProgress, type Progress, stuckProblem, watchProgress } from './stuck.ts';
 import { BASELINE_ARCH, VISUAL_MOTION } from './visual.ts';
 
 /** The options every target project sets: its target, and the matrix row it runs on. */
@@ -68,7 +70,33 @@ interface StackFixtures {
   readonly stackHold: boolean;
   /** The test's deadline following its timeout to the servers of its holds. */
   readonly deadlines: boolean;
+  /** The test's watch for standing still (stuck.ts), from its last hold on. */
+  readonly progress: Progress;
 }
+
+/** Runs a test under its watch: should it stand still, it ends through its own timeout, and its
+ *  teardown says what stood still. Holds' waits come before it, as they are not the test's. */
+const watchedTest = async (
+  provide: (progress: Progress) => Promise<void>,
+  testInfo: TestInfo,
+): Promise<void> => {
+  const began = performance.now();
+  const stood: { last?: string } = {};
+  const progress = watchProgress({
+    stuck: (last) => {
+      stood.last = last;
+      endStuck(testInfo, performance.now() - began);
+    },
+  });
+  try {
+    await provide(progress);
+  } finally {
+    progress.stop();
+  }
+  if (stood.last !== undefined) {
+    throw stuckProblem(stood.last);
+  }
+};
 
 /** The last move of a deadline on its way, so the next follows it and the servers hear them in
  *  the order the test made them. */
@@ -224,6 +252,12 @@ export const apiTest: TestType<
       // under its own timeout, whose end gives the hold back.
       { auto: true, timeout: 0 },
     ],
+    progress: [
+      async ({ stackHold: _held }, provide, testInfo): Promise<void> => {
+        await watchedTest(provide, testInfo);
+      },
+      { auto: true },
+    ],
   }),
 );
 
@@ -289,16 +323,36 @@ export const test: TestType<
     baseURL: async ({ stack }, provide): Promise<void> => {
       await provide(stack.baseURL);
     },
-    /** The test's context, made once its stack hold, seats and CPU turn are held; named to the edge. */
-    context: async ({ cpuTurn: _turn, context, row, stack }, provide, testInfo): Promise<void> => {
+    /** The test's context, made once its stack hold, seats and CPU turn are held; named to the edge,
+     *  its every request, frame and console line a move its watch hears. */
+    context: async (
+      { cpuTurn: _turn, context, progress, row, stack },
+      provide,
+      testInfo,
+    ): Promise<void> => {
       if (testInfo.tags.includes(API)) {
         throw new Error(`an ${API} test makes no page: it is written with apiTest`);
       }
+      hearProgress(context, progress);
       await joinEdge(context, stack.baseURL, row === undefined ? 'wired' : row.network);
       await provide(context);
     },
+    /** A page test's watch starts once its CPU turn is held, as seats and turns are waits, not its
+     *  own work; still automatic, as apiTest's is. */
+    progress: async ({ cpuTurn: _turn }, provide, testInfo): Promise<void> => {
+      await watchedTest(provide, testInfo);
+    },
     devices: async (
-      { context: _context, browser, browserContexts, ignoreHTTPSErrors, row, stack, visual },
+      {
+        context: _context,
+        browser,
+        browserContexts,
+        ignoreHTTPSErrors,
+        progress,
+        row,
+        stack,
+        visual,
+      },
       provide,
     ): Promise<void> => {
       const opened: BrowserContext[] = [];
@@ -319,6 +373,7 @@ export const test: TestType<
         });
         opened.push(device);
         device.once('close', giveBack);
+        hearProgress(device, progress);
         await joinEdge(device, stack.baseURL, row === undefined ? 'wired' : row.network);
         return device.newPage();
       };

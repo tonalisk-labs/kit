@@ -15,7 +15,9 @@ import {
 } from '../src/stack/gate-server.ts';
 import { announceDeadline, openHold } from '../src/stack/hold.ts';
 import { seatPool, stackLocks } from '../src/stack/lock.ts';
-import { type Clock, STILLNESS, type Stillness } from '../src/stack/stall.ts';
+import { STILLNESS, type Stillness } from '../src/stack/stall.ts';
+
+import { manualClock } from './manual-clock.ts';
 
 const flush = async (): Promise<void> =>
   new Promise((resolve) => {
@@ -173,35 +175,6 @@ await test('a seat wait given up says who holds the seats, by the names they gav
       idle();
     }
   }));
-
-/** A clock that moves only when told, ringing each alarm it passes. */
-const manualClock = (): { readonly clock: Clock; readonly advance: (ms: number) => void } => {
-  const state = { now: 0, alarms: new Set<{ readonly at: number; readonly ring: () => void }>() };
-  return {
-    clock: {
-      now: () => state.now,
-      after: (ms, ring) => {
-        const alarm = { at: state.now + ms, ring };
-        state.alarms.add(alarm);
-        return () => {
-          state.alarms.delete(alarm);
-        };
-      },
-    },
-    // Rings every alarm due by then, those its rings set among them, in the order they fall due.
-    advance: (ms) => {
-      state.now += ms;
-      const due = (): { readonly at: number; readonly ring: () => void } | undefined =>
-        [...state.alarms]
-          .filter(({ at }) => at <= state.now)
-          .toSorted((one, other) => one.at - other.at)[0];
-      for (let alarm = due(); alarm !== undefined; alarm = due()) {
-        state.alarms.delete(alarm);
-        alarm.ring();
-      }
-    },
-  };
-};
 
 await test('a seat wait outlives its bound while seats change hands, and fails once they stand still, naming who holds them', async () => {
   const { clock, advance } = manualClock();
