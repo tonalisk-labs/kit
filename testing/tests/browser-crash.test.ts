@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempDisposable, writeFile } from 'node:fs/promises';
+import { mkdtempDisposable, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
@@ -211,6 +211,29 @@ await test("a report whose parent the worker had started, as WebKit's launcher i
   } finally {
     await server.close();
   }
+});
+
+await test("a report stamped before its watch began, as Linux's coarser clock can stamp one, is the crash all the same", async () => {
+  await using folder = await reportsFolder();
+  const watched = browserWatch({ folders: [folder.path], waitMs: 60_000, reports: true });
+  const testInfo = attachments();
+  const report = { file: '' };
+  const body = async (since: number): Promise<void> => {
+    report.file = await writeReport(folder.path, {
+      pid: 60,
+      parentPid: process.pid,
+      procName: 'firefox',
+    });
+    // Written after the watch began, stamped a second before it: no clock may decide it's old.
+    const stamped = new Date(since - 1000);
+    await utimes(report.file, stamped, stamped);
+  };
+  const lost = { isConnected: (): boolean => false };
+  await assert.rejects(
+    watched({ browser: lost, browserName: 'firefox', connectOptions: undefined }, body, testInfo),
+    /^Error: firefox crashed mid-test: firefox EXC_BAD_ACCESS SIGSEGV .* \(pid 60, report /u,
+  );
+  assert.deepEqual(testInfo.kept, [`${CRASH_ATTACHMENT}: ${report.file}`]);
 });
 
 await test('a browser still connected when its test ends fails nothing', async () => {
