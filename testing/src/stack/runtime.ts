@@ -38,9 +38,8 @@ export interface Address {
   readonly port: number;
 }
 
-/** Where a running container is on its network, and where the host is there: the one address a
- *  host server for the container answers, and the address it listens on. `settled` is the global
- *  IPv6 address the network gives it some seconds after it starts, where it gives one. */
+/** A running container's address and the host's, where a host server for it listens; `settled`
+ *  is the global IPv6 address its network gives it seconds after it starts, if it gives one. */
 export interface Network {
   readonly own: string;
   readonly host: string;

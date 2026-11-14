@@ -48,9 +48,8 @@ const namedIn = (listed: unknown): string => {
   return listed.map((entry) => described(entry, now)).join('; ');
 };
 
-/** Who holds and waits at `origin`, as its GET /holders lists them, or why it couldn't say. Read
- *  through node:http, which tells a reset as its request's error: Node 24.21's fetch (undici
- *  7.29.1) throws it uncaught from `setTypeOfService` on macOS, ending the process. */
+/** Who holds and waits at `origin`, or why it couldn't say, read with node:http: on macOS, Node
+ *  24.21's fetch (undici 7.29.1) throws a reset uncaught from `setTypeOfService`. */
 const holdersAt = async (origin: string): Promise<string> => {
   const { promise, resolve } = Promise.withResolvers<string>();
   const failed = (error: unknown): void => {

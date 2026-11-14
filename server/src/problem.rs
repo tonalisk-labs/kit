@@ -15,10 +15,8 @@ pub const MEDIA_TYPE: &str = "application/problem+json";
 /// One invalid member of a request, located by a JSON Pointer (RFC 6901).
 #[derive(Debug, Serialize, ToSchema)]
 pub struct InvalidMember {
-    /// JSON Pointer to the member within the request body.
-    ///
-    /// Empty for the whole body. A header or a query parameter is named instead, as
-    /// `header:<name>` or `query:<name>`.
+    /// JSON Pointer to the member within the request body, empty for the whole body; a header or a
+    /// query parameter is named instead, as `header:<name>` or `query:<name>`.
     pub pointer: String,
     /// What is wrong with it.
     pub detail: String,

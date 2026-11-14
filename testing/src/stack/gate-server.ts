@@ -76,9 +76,8 @@ export const holdIdOf = (incoming: IncomingMessage): string | undefined => {
 /** A hold's id as openHold makes it, a random UUID: nothing else names a hold. */
 const HOLD_ID = /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/u;
 
-/** Moves the deadline of the hold `id` names to `given`, epoch milliseconds or none at all, as
- *  its test's timeout moved: 204, or 404 for a hold this process doesn't serve. A request names
- *  only an entry of the table: an id of another shape is looked up nowhere. */
+/** Moves hold `id`'s deadline to `given` (epoch ms, or none) as its test's timeout moved: 204, or
+ *  404 for a hold this process doesn't serve; an id of another shape is looked up nowhere. */
 export const answerDeadline = (outgoing: ServerResponse, id: string, given: string): void => {
   const renew = HOLD_ID.test(id) && renewers.has(id) ? renewers.get(id) : undefined;
   if (typeof renew !== 'function') {
@@ -240,9 +239,8 @@ const enqueue = async (
   await promise;
 };
 
-/** The slots, first come, first served, so a whole-machine turn is never starved. A set keeps the
- *  order with O(1) removal. A wait fails once no slot has changed hands for the stillness's stall,
- *  saying `what` stood still. */
+/** The slots, first come, first served, so a whole-machine turn is never starved; a wait fails,
+ *  naming `what`, once no slot has changed hands for the stillness's stall. */
 export const semaphore = (
   slots: number,
   { stillness = STILLNESS, what = 'no slot' }: { stillness?: Stillness; what?: string } = {},

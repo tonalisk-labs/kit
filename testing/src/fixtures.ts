@@ -48,9 +48,8 @@ export interface Options {
   readonly row: Row | undefined;
   /** A visual project's: Chromium in the Linux image, holding screens to their baselines. */
   readonly visual: boolean;
-  /** The most browser contexts one of the worker's tests has open at once, its own included: a
-   *  seat each in the Linux image while the test runs, which a test of several devices declares
-   *  with `test.use`. */
+  /** The most browser contexts a test of the worker's has open at once, its own included, each a
+   *  seat in the Linux image as it runs; a test of several devices declares it with `test.use`. */
   readonly browserContexts: number;
 }
 
@@ -282,10 +281,8 @@ export const test: TestType<
       },
       { scope: 'worker' },
     ],
-    /**
-     * WebKit on macOS, and every visual project's browser, is Playwright's own Linux build in the
-     * container the stack host starts; baselines match only the architecture that drew them.
-     */
+    /** WebKit on macOS and every visual project's browser run Playwright's Linux build in the
+     *  stack's container, reaching the host's loopback by its proxy; baselines hold on one arch. */
     connectOptions: [
       async ({ browserName, visual }, provide): Promise<void> => {
         if (visual && arch() !== BASELINE_ARCH) {
@@ -300,7 +297,6 @@ export const test: TestType<
             'WebKit on macOS and the visual projects run only in the Linux image: its setup project starts it',
           );
         }
-        // The image's browser reaches the host's loopback through the host's proxy (stack/socks.ts).
         await provide(wsEndpoint === undefined ? undefined : { wsEndpoint });
       },
       { scope: 'worker' },
@@ -396,9 +392,8 @@ export const test: TestType<
     channels: [{}, { option: true }],
     reconnect: [undefined, { option: true }],
     keyboardOnly: [false, { option: true }],
-    /** Taken after the stack hold, so every holder is a test with its stack, and before the CPU
-     *  turn, which a holder may wait on: a test waiting for seats holds no turn. The wait is not the
-     *  test's, and fails should the seats stand still (stack/lock.ts). */
+    /** After the stack hold, so every holder has its stack, and before the CPU turn, so a test
+     *  waiting for seats holds none; the wait isn't the test's, and fails if seats stand still. */
     browserSeat: [
       async (
         { stackHold: _held, browserName, browserContexts, visual },

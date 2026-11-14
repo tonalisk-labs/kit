@@ -36,6 +36,8 @@ run = [
   "cargo deny check",
   "node rules/rust-lints.ts --elite Cargo.toml template/Cargo.toml.jinja",
   "node rules/lint-styles.ts",
+  # kit holds itself to the prose rule it gives every repo; release-please writes the changelog.
+  "node rules/prose.ts --ignore CHANGELOG.md",
   "node theme/themes/build.ts --check",
   "knip",
   "editorconfig-checker",
