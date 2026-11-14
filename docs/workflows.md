@@ -12,6 +12,9 @@ kit is public, so its Actions minutes are free. Every action is pinned to a comm
 | `release.yml` | called by `publish.yml` and the public sites | release-please, a draft attested, then published  |
 | `pages.yml`   | called by the public sites after a release   | the site, deployed to GitHub Pages                |
 
+Each run is its own concurrency group, so none is ever cancelled, and two publish runs could
+overlap. So nothing merges to `main` while a publish run is in flight.
+
 A release builds with a read token only. Jobs that run nothing from the repo attest the files and
 attach them to a draft, give npm the package through
 [trusted publishing](https://docs.npmjs.com/trusted-publishers) with no npm token, its provenance
