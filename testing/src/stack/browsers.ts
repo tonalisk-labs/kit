@@ -82,23 +82,19 @@ const LOG_FILE = '/tmp/browsers.log';
  *  server's Node makes a context's own requests, as `route.fetch` and `context.request` do. */
 const CA_FILE = '/usr/local/share/ca-certificates/tonalisk-kit-edge.crt';
 
-/** The pipe the host writes the proxy's address to, once it listens, and the IPv6 address the
- *  container's network gives it: only then may the browsers launch, as each takes its proxy at its
- *  launch. */
+/** Where the host writes the proxy's address once it listens, and the container's IPv6 address:
+ *  only then may the browsers launch, as each takes its proxy as it launches. */
 const PROXY_PIPE = '/tmp/proxy';
 
-/** Launches each engine's browser behind the host's proxy, serving it to every worker. A browser
- *  that crashes fails the tests it was serving, as one per worker did, and is launched again at
- *  the same address for the workers that follow. On the container's stop, Playwright closes each
- *  browser and keeps the process; it exits once both are closed, launching none again. */
+/** Each engine's browser behind the host's proxy, for every worker: one that crashes fails its
+ *  tests and is launched again at its address; on stop, the process exits once all have closed. */
 const SERVE = `
 const playwright = require('/playwright-core');
 const engines = ${JSON.stringify(Object.entries(PORTS))};
 const proxy = { server: process.env.PROXY };
 const state = { stopping: false, open: engines.length };
-// A browser launched before its network has given the container its IPv6 address hears the
-// address arrive as a network change, and Chromium fails the navigations it has open
-// (ERR_NETWORK_CHANGED): the browsers launch once it's there, or after 30 s without it.
+// Chromium fails its open navigations when the container's IPv6 address arrives after it launched
+// (ERR_NETWORK_CHANGED), so the browsers launch once it's there, or after 30 s without it.
 const settled = async (left = 300) => {
   const wanted = process.env.SETTLED;
   const addresses = Object.values(require('node:os').networkInterfaces()).flat();

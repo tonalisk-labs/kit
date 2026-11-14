@@ -43,10 +43,8 @@ export const onLoopback = (host: string): boolean =>
   host === '::1' ||
   host === IPV6_LOOPBACK;
 
-/** Where a request goes from the host: a name on the loopback to 127.0.0.1, where every edge
- *  listens and macOS puts names under localhost; any other as it was asked. Behind a SOCKS proxy
- *  Playwright launches Chromium with `--host-resolver-rules=MAP * ~NOTFOUND`, so nothing else
- *  reaches out but through here, and the Stripe sandbox's journeys go to checkout.stripe.com. */
+/** Where a request goes from the host: a loopback name to 127.0.0.1, where every edge listens,
+ *  and any other as asked, since Chromium behind the proxy resolves nothing itself. */
 export const routeOf = ({ host, port }: Destination): Destination =>
   onLoopback(host) && isIP(host) === 0 ? { host: '127.0.0.1', port } : { host, port };
 
@@ -203,7 +201,7 @@ export const startSocks = async ({
       return;
     }
     open.add(client);
-    // A client that resets part way is closed, never an error the host's process throws.
+    // A reset, a broken greeting or a client gone part way ends that client alone, never the host.
     client
       .on('error', () => {
         client.destroy();
@@ -211,7 +209,6 @@ export const startSocks = async ({
       .once('close', () => {
         open.delete(client);
       });
-    // A broken greeting or a client gone part way ends that client alone.
     serve(client).catch(() => {
       client.destroy();
     });

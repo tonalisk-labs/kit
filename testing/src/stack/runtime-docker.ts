@@ -60,9 +60,8 @@ const labelledIn = (listing: string): Map<string, string> =>
 
 type Call = Caller['call'];
 
-/** A container's address and its network's gateway, as `docker inspect` gives its networks in
- *  JSON. On Linux the gateway is the host's own bridge; Docker Desktop's is in its virtual
- *  machine, so a host server there would be out of the container's reach. */
+/** A container's address and gateway from `docker inspect`: on Linux the host's own bridge, but
+ *  Docker Desktop's is in its virtual machine, out of reach of a host server. */
 const networkIn = (id: string, answer: string, platform: NodeJS.Platform): Network => {
   if (platform === 'darwin') {
     throw new Error(

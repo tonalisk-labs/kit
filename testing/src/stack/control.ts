@@ -83,9 +83,8 @@ export const testBegins = (now: number = Date.now()): void => {
   running.waited = 0;
 };
 
-/** When a test must end, by Playwright's count: its start, plus the hold waits it isn't charged,
- *  plus its timeout; none for a test with no timeout. A hold's server lets a stillness pass while
- *  its holders are inside their deadlines; the test moves them as its timeout moves. */
+/** When a test must end by Playwright's count, its start plus the hold waits it isn't charged plus
+ *  its timeout, or none: a hold's server forgives a stillness while holders are inside theirs. */
 export const deadlineFrom = (timeout: number, clock: TestClock = running): number | undefined =>
   timeout > 0 ? clock.start + clock.waited + timeout : undefined;
 

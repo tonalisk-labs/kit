@@ -87,9 +87,8 @@ const give = (stack: Stack, hold: Hold): void => {
   admit(stack);
 };
 
-/** A readers-writer lock per target, kept by the stack host. A waiting owner stops no sharer:
- *  owners queue after every shared test, so stopping sharers would only idle workers. A wait fails
- *  once no hold on its stack has changed hands for the stillness's stall. */
+/** A readers-writer lock per target; a waiting owner stops no sharer, which would only idle
+ *  workers, and a wait fails once no hold on its stack changes hands for the stillness's stall. */
 export const stackLocks = (
   stillness: Stillness = STILLNESS,
 ): {
@@ -118,9 +117,8 @@ export const stackLocks = (
   };
 };
 
-/** A pool of `size` seats, a holder taking the ones it asks for all at once, in the order asked;
- *  more than the pool has is refused at once, as it could never be seated. A wait fails once no
- *  seat has changed hands for the stillness's stall. */
+/** A pool of `size` seats, each holder seated all at once in the order asked, more than the pool
+ *  refused; a wait fails once no seat has changed hands for the stillness's stall. */
 export const seatPool = (
   size: number,
   stillness: Stillness = STILLNESS,

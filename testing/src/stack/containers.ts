@@ -83,8 +83,7 @@ const addressIn =
     return found;
   };
 
-/** A container started from `spec` once it says it's ready; `started` runs as it starts, before
- *  that, for a service that waits on something the host gives it. */
+/** A container from `spec` once it says it's ready; `started` runs first, for what it waits on. */
 export const container = async (
   spec: ContainerSpec,
   signal: AbortSignal,
