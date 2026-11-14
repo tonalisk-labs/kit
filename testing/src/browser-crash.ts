@@ -1,7 +1,7 @@
 // What a browser lost mid-test died of, from the crash report macOS writes for it as JSON
 // (`.ips`): a header line, then the report, which names the process's parent: the worker, or a
 // process the worker started for it.
-import { existsSync, readdirSync, readFileSync, statSync, watch } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, watch } from 'node:fs';
 import { homedir, platform } from 'node:os';
 import path from 'node:path';
 
@@ -98,29 +98,31 @@ const reportFilesIn = (folder: string): string[] => {
   }
 };
 
-/** The report in `file`, if it was written since `since` (ms since the epoch) and is one; a file
- *  macOS removed or is still writing is none yet. */
-const reportIn = (file: string, since: number): CrashReport | undefined => {
+/** The report files `folders` hold now, never taken by a wait begun now: macOS names each report
+ *  by its time, and Linux stamps a file from a clock that can trail Date.now() by milliseconds. */
+export const reportsKnown = (folders: readonly string[]): ReadonlySet<string> =>
+  new Set(folders.flatMap((folder) => reportFilesIn(folder)));
+
+/** The report in `file`, if it is one; a file macOS removed or is still writing is none yet. */
+const reportIn = (file: string): CrashReport | undefined => {
   try {
-    const written = statSync(file, { throwIfNoEntry: false });
-    return written !== undefined && written.mtimeMs >= since
-      ? crashReportOf(file, readFileSync(file, 'utf8'))
-      : undefined;
+    return crashReportOf(file, readFileSync(file, 'utf8'));
   } catch {
     return undefined;
   }
 };
 
-/** The report in `folders`, written since `since`, of a process one of `parents` started, the
- *  earlier parent first: the worker's own child, the browser, ahead of a helper of the browser's. */
+/** The report in `folders`, none of `known`, of a process one of `parents` started, the earlier
+ *  parent first: the worker's own child, the browser, ahead of a helper of the browser's. */
 const firstReport = (
   folders: readonly string[],
-  { parents, since }: { readonly parents: readonly number[]; readonly since: number },
+  { parents, known }: { readonly parents: readonly number[]; readonly known: ReadonlySet<string> },
 ): CrashReport | undefined => {
   const written = folders
     .flatMap((folder) => reportFilesIn(folder))
+    .filter((file) => !known.has(file))
     .toSorted()
-    .map((file) => reportIn(file, since))
+    .map((file) => reportIn(file))
     .filter((report): report is CrashReport => report !== undefined);
   return parents
     .map((parent) => written.find((report) => report.parentPid === parent))
@@ -139,7 +141,8 @@ const watchFolder = (folder: string, signal: AbortSignal, look: () => void): voi
 export interface ReportWanted {
   /** The processes whose child's report is wanted: the worker, and those it had started. */
   readonly parents: readonly number[];
-  readonly since: number;
+  /** The reports the folders held as the watch began (`reportsKnown`), which are never taken. */
+  readonly known: ReadonlySet<string>;
   readonly folders: readonly string[];
   /** Ends the wait: nothing was written in time. */
   readonly signal: AbortSignal;
@@ -149,13 +152,13 @@ export interface ReportWanted {
  *  of `folders`; if `signal` ends the wait first, whatever is there by then. */
 export const crashReportFor = async ({
   parents,
-  since,
+  known,
   folders,
   signal,
 }: ReportWanted): Promise<CrashReport | undefined> => {
   const found = Promise.withResolvers<CrashReport | undefined>();
   const look = (): void => {
-    const report = firstReport(folders, { parents, since });
+    const report = firstReport(folders, { parents, known });
     if (report !== undefined) {
       found.resolve(report);
     }
@@ -163,7 +166,7 @@ export const crashReportFor = async ({
   const ended = new AbortController();
   const watching = AbortSignal.any([signal, ended.signal]);
   if (watching.aborted) {
-    return firstReport(folders, { parents, since });
+    return firstReport(folders, { parents, known });
   }
   for (const folder of folders.filter((one) => existsSync(one))) {
     watchFolder(folder, watching, look);
@@ -171,7 +174,7 @@ export const crashReportFor = async ({
   // At the bound, what has been written by then; once found, the wait's own end looks no more.
   watching.addEventListener('abort', () => {
     if (!ended.signal.aborted) {
-      found.resolve(firstReport(folders, { parents, since }));
+      found.resolve(firstReport(folders, { parents, known }));
     }
   });
   // A report written before the watches began fires no event of its own.
@@ -187,7 +190,7 @@ interface Lost {
   readonly engine: string;
   /** Whether the browser ran in the Linux image, whose crashes macOS never sees. */
   readonly remote: boolean;
-  readonly since: number;
+  readonly known: ReadonlySet<string>;
   readonly parents: readonly number[];
   readonly folders: readonly string[];
   readonly waitMs: number;
@@ -199,7 +202,7 @@ interface Lost {
 const lostBrowser = async ({
   engine,
   remote,
-  since,
+  known,
   parents,
   folders,
   waitMs,
@@ -210,7 +213,7 @@ const lostBrowser = async ({
     return { message: `${engine} was lost mid-test, ${where}`, report: undefined };
   }
   const signal = AbortSignal.timeout(waitMs);
-  const report = await crashReportFor({ parents, since, folders, signal });
+  const report = await crashReportFor({ parents, known, folders, signal });
   if (report === undefined) {
     const waited = `macOS wrote no crash report for it within ${String(waitMs / 1000)} s`;
     return { message: `${engine} was lost mid-test, and ${waited}`, report };
@@ -275,6 +278,7 @@ export const browserWatch =
     testInfo: Attaching,
   ): Promise<void> => {
     const since = Date.now();
+    const known = reports ? reportsKnown(folders) : new Set<string>();
     // Read before the test runs, while every process the browser was launched with is alive.
     const launchers = reports ? await launchersOf(browser) : [];
     await provide(since);
@@ -283,7 +287,7 @@ export const browserWatch =
     }
     const remote = connectOptions !== undefined;
     const parents = [process.pid, ...launchers];
-    const lost = { engine: browserName, remote, since, parents, folders, waitMs, reports };
+    const lost = { engine: browserName, remote, known, parents, folders, waitMs, reports };
     const { message, report } = await lostBrowser(lost);
     if (report !== undefined) {
       await testInfo.attach(CRASH_ATTACHMENT, { path: report.file, contentType: 'text/plain' });

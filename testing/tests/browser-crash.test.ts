@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempDisposable, utimes, writeFile } from 'node:fs/promises';
+import { mkdtempDisposable, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
@@ -12,6 +12,7 @@ import {
   CRASH_ATTACHMENT,
   crashReportFor,
   crashReportOf,
+  reportsKnown,
 } from '../src/browser-crash.ts';
 
 /** The process a crash report names; `reportText` writes the report as macOS does, a header line
@@ -82,11 +83,10 @@ await test('a file that is no crash report, or reports no exception, is none', (
 
 await test("the report of a process the worker started is taken once it's written, never another's", async () => {
   await using folder = await reportsFolder();
-  const since = Date.now();
   const ended = new AbortController();
   const waited = crashReportFor({
     parents: [4],
-    since,
+    known: reportsKnown([folder.path]),
     folders: [folder.path],
     signal: ended.signal,
   });
@@ -104,6 +104,7 @@ await test("the report of a process the worker started is taken once it's writte
 
 await test("the browser's own report is taken ahead of its helper's, whichever name sorts first", async () => {
   await using folder = await reportsFolder();
+  const known = reportsKnown([folder.path]);
   // A helper's parent is the browser, a process the worker started; the browser's is the worker.
   await writeReport(folder.path, { pid: 41, parentPid: 40, procName: 'Chromium Helper (GPU)' });
   const browsers = await writeReport(folder.path, { pid: 40, parentPid: 4, procName: 'Chromium' });
@@ -111,7 +112,7 @@ await test("the browser's own report is taken ahead of its helper's, whichever n
   ended.abort();
   const report = await crashReportFor({
     parents: [4, 40],
-    since: Date.now() - 60_000,
+    known,
     folders: [folder.path],
     signal: ended.signal,
   });
@@ -120,13 +121,11 @@ await test("the browser's own report is taken ahead of its helper's, whichever n
 
 await test('a report written before the wait began is not taken, and the bound ends the wait', async () => {
   await using folder = await reportsFolder();
-  const old = await writeReport(folder.path, { pid: 50, parentPid: 5, procName: 'firefox' });
-  const before = new Date(Date.now() - 60_000);
-  await utimes(old, before, before);
+  await writeReport(folder.path, { pid: 50, parentPid: 5, procName: 'firefox' });
   const ended = new AbortController();
   const waited = crashReportFor({
     parents: [5],
-    since: Date.now(),
+    known: reportsKnown([folder.path]),
     folders: [folder.path],
     signal: ended.signal,
   });
