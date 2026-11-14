@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
-import { discoverIn } from '../src/discover.ts';
+import { discoverIn, repoNamed } from '../src/discover.ts';
 
 /** A repo named `name` with an Astro config in each of `folders` ('.' for the root). */
 const repoWith = (name: string, folders: readonly string[]): string => {
@@ -94,5 +94,24 @@ await test('a folder below the top of a checkout is named for itself', () => {
     assert.deepEqual(names(path.join(repo, 'site')), ['site']);
   } finally {
     rmSync(path.dirname(repo), { recursive: true, force: true });
+  }
+});
+
+await test('KIT_ROOT is taken only where it names a folder holding a package.json', () => {
+  const folder = mkdtempSync(path.join(tmpdir(), 'discover-root-'));
+  try {
+    const refused = /^Error: KIT_ROOT names .* which holds no package\.json$/u;
+    assert.throws(() => repoNamed(folder), refused);
+    const missing = path.join(folder, 'missing');
+    assert.throws(() => repoNamed(missing), refused);
+    mkdirSync(path.join(folder, 'package.json'));
+    assert.throws(() => repoNamed(folder), refused);
+    rmSync(path.join(folder, 'package.json'), { recursive: true });
+    writeFileSync(path.join(folder, 'package.json'), '{}');
+    assert.equal(repoNamed(folder), folder);
+    const relative = path.relative(process.cwd(), folder);
+    assert.equal(repoNamed(relative), folder);
+  } finally {
+    rmSync(folder, { recursive: true, force: true });
   }
 });

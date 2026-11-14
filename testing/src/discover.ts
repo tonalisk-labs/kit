@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, globSync, realpathSync } from 'node:fs';
+import { existsSync, globSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 /** A site or app frontend under test, found by its Astro config. */
@@ -10,8 +10,20 @@ export interface Target {
   readonly adapter: string | undefined;
 }
 
+/** The folder `named`, refused unless it holds a package.json as a repo's root does, so a stray
+ *  value never reaches a child process as its folder or argument. */
+export const repoNamed = (named: string): string => {
+  const repo = path.resolve(named);
+  const manifest = statSync(path.join(repo, 'package.json'), { throwIfNoEntry: false });
+  if (manifest === undefined || !manifest.isFile()) {
+    throw new Error(`KIT_ROOT names ${JSON.stringify(named)}, which holds no package.json`);
+  }
+  return repo;
+};
+
+const kitRoot = process.env['KIT_ROOT'];
 /** The repo under test: the one whose `playwright.config.ts` runs, or `KIT_ROOT`. */
-export const REPO = path.resolve(process.env['KIT_ROOT'] ?? process.cwd());
+export const REPO = kitRoot === undefined ? path.resolve(process.cwd()) : repoNamed(kitRoot);
 
 /** The checkout `folder` is the top of, and the git directory it shares with every worktree of its
  *  repo; undefined outside git. The variables a git hook sets would answer for another folder. */
