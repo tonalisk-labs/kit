@@ -7,4 +7,9 @@
   <issue id="AndroidGradlePluginVersion" severity="ignore" />
   <issue id="GradleDependency" severity="ignore" />
   <issue id="NewerVersionAvailable" severity="ignore" />
+  <!-- JNA's AWT helper names java.awt, which Android lacks. It loads only for an AWT component,
+       which an Android app never has, so that one class is the only reference let through. -->
+  <issue id="InvalidPackage">
+    <ignore regexp="Referenced from `com\.sun\.jna\.Native\.AWT`" />
+  </issue>
 </lint>
