@@ -14,7 +14,7 @@ import {
   heldMs,
   steer,
 } from './contexts.ts';
-import { type Downs, refusedOnPurpose, whileDown } from './down.ts';
+import { type Downs, refusedOnPurpose, upstreamFailure, whileDown } from './down.ts';
 import { encoded, forwardedNoneMatch } from './encode.ts';
 import { hold, linger, pipeDown } from './live.ts';
 import { CONNECTS_AT_ONCE } from './ports.ts';
@@ -237,7 +237,7 @@ const failWith = (outgoing: Outgoing, error: Error, said: boolean): void => {
     return;
   }
   if (said) {
-    console.error(`edge proxy: upstream ${error.message}`);
+    console.error(upstreamFailure(error));
   }
   if (outgoing.headersSent) {
     outgoing.destroy(error);
@@ -379,7 +379,7 @@ const send = (router: Router, { incoming, client, up, down, context }: Upgrade):
   });
   upstream.on('error', (error) => {
     if (!refusedOnPurpose(router.down, port, error)) {
-      console.error(`edge proxy: upstream ${error.message}`);
+      console.error(upstreamFailure(error));
     }
     failUpgrade(client, down, answered.now);
   });

@@ -14,6 +14,11 @@ export const refusedOnPurpose = (downs: Downs, port: number, error: Error): bool
   return true;
 };
 
+/** The line an upstream's failure is logged as: its message can carry a request's own text, so a
+ *  line break in it is escaped as JSON escapes it, never read as a line the edge didn't write. */
+export const upstreamFailure = (error: Error): string =>
+  `edge proxy: upstream ${JSON.stringify(error.message).slice(1, -1)}`;
+
 /** Runs `work` with the upstream on `port` down on purpose; resolves with the refusals it met. */
 export const whileDown =
   (downs: Downs) =>

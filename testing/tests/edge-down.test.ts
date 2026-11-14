@@ -7,6 +7,7 @@ import { createServer } from 'node:http';
 import { connect } from 'node:http2';
 import { test } from 'node:test';
 
+import { upstreamFailure } from '../src/stack/down.ts';
 import { type Edge, startEdge } from '../src/stack/edge.ts';
 import { fetchOver } from './edge-fetch.ts';
 
@@ -80,3 +81,12 @@ try {
   session.close();
   await edge.stop();
 }
+
+await test("an upstream's failure is logged on one line, whatever its message holds", () => {
+  const line = upstreamFailure(new Error('socket hang up\nedge proxy: upstream forged\r'));
+  assert.equal(
+    line,
+    String.raw`edge proxy: upstream socket hang up\nedge proxy: upstream forged\r`,
+  );
+  assert.doesNotMatch(line, /[\n\r]/u);
+});
