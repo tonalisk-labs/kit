@@ -48,6 +48,7 @@ const LANGUAGES: Readonly<Record<string, Language>> = {
   js: slashed(TS_OPENS, JS_TYPE_TAG),
   swift: slashed(/\b(?:func|init|deinit|subscript)\b.*\{\s*$|\bvar\b[^=]*\{\s*$/u),
   rs: slashed(/\bfn\b.*\{\s*$/u, RUST_HEADINGS),
+  kt: slashed(/\bfun\b.*\{\s*$|^\s*(?:init\s*|constructor\b.*|(?:get|set)\([^)]*\).*)\{\s*$/u),
   sh: {
     comment: /^\s*#/u,
     blockOpen: NEVER,
@@ -73,6 +74,8 @@ const KINDS: Readonly<Record<string, string>> = {
   '.cjs': 'js',
   '.swift': 'swift',
   '.rs': 'rs',
+  '.kt': 'kt',
+  '.kts': 'kt',
   '.sh': 'sh',
   '.py': 'py',
 };
@@ -206,10 +209,10 @@ const closeBodies = (reading: Reading): void => {
   }
 };
 
-/** A file's imports, whose header comment documents the file, not a function or type. Swift's
- *  and Rust's may carry an attribute and an access level. */
+/** A file's imports, or Kotlin's package and file annotations, whose header comment documents the
+ *  file, not a function or type. Swift's and Rust's may carry an attribute and an access level. */
 const IMPORT =
-  /^\s*(?:@\w+\s+)*(?:(?:public|package|internal|fileprivate|private|pub(?:\([^)]*\))?)\s+)?(?:import|use|from|export\s+\*|export\s+\{[^}]*\}\s+from)\b/u;
+  /^\s*(?:@\w+\s+)*(?:(?:public|package|internal|fileprivate|private|pub(?:\([^)]*\))?)\s+)?(?:import|use|from|package|@file:|export\s+\*|export\s+\{[^}]*\}\s+from)\b/u;
 
 /** A line of code: one that opens a function's body counts the waiting lines as its own, and one
  *  that ends a declaration checks them. */

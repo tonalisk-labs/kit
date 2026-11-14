@@ -8,7 +8,7 @@ await test("jscpd runs with every project's flags, on the folders named", () => 
   assert.deepEqual(
     jscpdArguments(FORMATS, '/out', ['web', 'apple']).join(' '),
     [
-      '--min-lines 11 --format typescript,tsx,javascript,swift,rust --cross-formats js-ts',
+      '--min-lines 11 --format typescript,tsx,javascript,swift,rust,kotlin --cross-formats js-ts',
       '--workers 3 --absolute --reporters json,silent --output /out --no-tips --no-colors web apple',
     ].join(' '),
   );

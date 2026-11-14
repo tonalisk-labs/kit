@@ -1,0 +1,82 @@
+# Every detekt rule there is: a repo runs detekt with --all-rules (allRules in Gradle) and this
+# file, and any finding fails. A rule is off or narrowed only where it contradicts kit's standard
+# (rules/README.md) or a rule that is on, and each such entry names the one kept.
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+config:
+  validation: true
+  warningsAsErrors: true
+  checkExhaustiveness: false
+  excludes: ''
+
+# The console says what fails, one line a finding, and nothing else: no statistics, no complexity
+# report and no notice of where the reports were written, so a passing run logs nothing.
+console-reports:
+  active: true
+  exclude:
+    - 'ComplexityReport'
+    - 'FileBasedFindingsReport'
+    - 'FindingsReport'
+    - 'NotificationReport'
+    - 'ProjectStatisticsReport'
+
+processors:
+  active: true
+  exclude:
+    - 'DetektProgressListener'
+
+comments:
+  # A licence header follows the repo's own template, which kit can't name.
+  AbsentOrWrongFileLicense:
+    active: false
+  # Each forbids a comment over a private member, which may be the why kit's standard keeps.
+  CommentOverPrivateFunction:
+    active: false
+  CommentOverPrivateProperty:
+    active: false
+  # Each asks for a doc on every public declaration, which says what the code says; kit's
+  # standard keeps comments to why, so the prose rule is kept.
+  UndocumentedPublicClass:
+    active: false
+  UndocumentedPublicFunction:
+    active: false
+  UndocumentedPublicProperty:
+    active: false
+
+naming:
+  # A composable is named as a noun in PascalCase, as Compose's API guidelines ask.
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
+  # A test's name is the sentence it proves, which takes more than 30 characters, in any suite.
+  FunctionMaxLength:
+    excludes: ['**/test/**', '**/*Test/**', '**/testFixtures/**']
+
+style:
+  # It wraps a call that follows a multiline argument list onto a line of its own, where
+  # ktlint's chain-method-continuation keeps it on the list's closing line: ktlint's is kept.
+  CascadingCallWrapping:
+    active: false
+  # The line every tonalisk-labs file keeps to (.editorconfig, oxfmt, SwiftLint, rustfmt).
+  MaxLineLength:
+    maxLineLength: 100
+  # A log is where a secret, a token or a person's words leak; no tonalisk-labs app writes one.
+  ForbiddenImport:
+    imports:
+      - value: 'android.util.Log'
+        reason: 'Nothing a person wrote, and no secret, may reach a log.'
+  ForbiddenMethodCall:
+    methods:
+      - value: 'kotlin.io.print'
+        reason: 'Nothing a person wrote, and no secret, may reach a log.'
+      - value: 'kotlin.io.println'
+        reason: 'Nothing a person wrote, and no secret, may reach a log.'
+      - value: 'java.lang.Throwable.printStackTrace'
+        reason: 'Nothing a person wrote, and no secret, may reach a log.'
+      - value: 'java.lang.Thread.sleep'
+        reason: 'Code waits for the event it needs, never a delay.'
+  # Parentheses that make the precedence of mixed operators plain, which ktlint's
+  # mixed-condition-operators asks for, are kept.
+  UnnecessaryParentheses:
+    allowForUnclearPrecedence: true

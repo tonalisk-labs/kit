@@ -13,6 +13,11 @@
   "lockFileMaintenance": { "enabled": true },
   "packageRules": [
     {
+      "description": "A Maven or Gradle release waits 3 days, as npm's and crates' do: Renovate has no preset for them.",
+      "matchDatasources": ["maven", "gradle-version"],
+      "minimumReleaseAge": "3 days"
+    },
+    {
       "description": "Every non-major update in one weekly PR, so a dozen bumps cost one check run.",
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "groupName": "non-major dependencies"

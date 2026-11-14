@@ -1,0 +1,15 @@
+<!-- Every Android Lint issue, as an error. A repo names this as its lintConfig, with
+     warningsAsErrors, checkAllWarnings and checkDependencies on, and no baseline. -->
+<lint>
+  <issue id="all" severity="error" />
+  <!-- Each asks the network for a newer release, so a build's outcome would change with the
+       calendar; Renovate (default.json) raises those updates instead. -->
+  <issue id="AndroidGradlePluginVersion" severity="ignore" />
+  <issue id="GradleDependency" severity="ignore" />
+  <issue id="NewerVersionAvailable" severity="ignore" />
+  <!-- JNA's AWT helper names java.awt, which Android lacks. It loads only for an AWT component,
+       which an Android app never has, so that one class is the only reference let through. -->
+  <issue id="InvalidPackage">
+    <ignore regexp="Referenced from `com\.sun\.jna\.Native\.AWT`" />
+  </issue>
+</lint>

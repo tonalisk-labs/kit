@@ -115,6 +115,56 @@ await test('a line that says nothing to a reader counts for nothing, in every la
   assert.deepEqual(commentFindings('f.swift', 'swift', swift), []);
 });
 
+await test('Kotlin counts its KDoc and comments, through annotations, and its package is the header', () => {
+  const kotlin = lines(
+    '// The file, said in three lines,',
+    '// as a header may be,',
+    '// before its package.',
+    'package eu.example',
+    '',
+    '/** One. */',
+    '@Composable',
+    'fun f(a: Int = 0): Int {',
+    '    // Two.',
+    '    // Three.',
+    '    return a',
+    '}',
+    '',
+    '/** One. */',
+    'class C(val a: Int) {',
+    '    init {',
+    '        // Two, for init alone.',
+    '    }',
+    '}',
+  );
+  assert.deepEqual(commentFindings('f.kt', 'kt', kotlin), [
+    'f.kt:6 has 3 comment lines, where the most is 2',
+  ]);
+  const expression = lines('/** One. */', '// Two.', 'fun g() = 1', '', 'val h = 2');
+  assert.deepEqual(commentFindings('g.kts', 'kt', expression), []);
+  const initBody = lines(
+    'class D {',
+    '    init {',
+    '        // One.',
+    '        // Two.',
+    '        // Three.',
+    '    }',
+    '}',
+  );
+  assert.deepEqual(commentFindings('d.kt', 'kt', initBody), [
+    'd.kt:2 has 3 comment lines, where the most is 2',
+  ]);
+  const annotated = lines(
+    '// A header of',
+    '// three lines,',
+    '// before the file annotation.',
+    '@file:JvmName("Named")',
+    '',
+    'package eu.example',
+  );
+  assert.deepEqual(commentFindings('n.kt', 'kt', annotated), []);
+});
+
 await test('a type tag that only restates the type, or a tool’s directive, counts for nothing', () => {
   const typed = ['/**', ' * One.', ' * @param {string} name', ' * @returns {number}', ' */'];
   const javascript = lines(...typed, 'export function f(name) {', '  return name.length;', '}');

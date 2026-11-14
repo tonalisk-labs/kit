@@ -11,7 +11,7 @@ import { parseArgs } from 'node:util';
 export const JSCPD_VERSION = '5.4.2';
 
 /** The formats a repo's code is measured in by default, TypeScript compared with TSX. */
-export const FORMATS = 'typescript,tsx,javascript,swift,rust';
+export const FORMATS = 'typescript,tsx,javascript,swift,rust,kotlin';
 
 /** The arguments jscpd takes for `folders`, in `formats`, its report written to `output`. */
 export const jscpdArguments = (
