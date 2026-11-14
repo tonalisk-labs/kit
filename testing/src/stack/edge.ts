@@ -1,12 +1,11 @@
-import { randomInt } from 'node:crypto';
 import { once } from 'node:events';
 import { Agent, type IncomingHttpHeaders, type IncomingMessage, request } from 'node:http';
 import { createSecureServer, type Http2SecureServer, Http2ServerRequest } from 'node:http2';
 import type { Socket } from 'node:net';
 import { pipeline, type Readable, type Transform } from 'node:stream';
 
-import { CONTEXT_COOKIE, type NetworkProfile } from '../network.ts';
-import { answerFault, type Outgoing, writeHead } from './answers.ts';
+import { CONTEXT_COOKIE } from '../network.ts';
+import { answerFault, left, type Outgoing, writeHead } from './answers.ts';
 import {
   CONTROL_PREFIX,
   contextOf,
@@ -15,7 +14,9 @@ import {
   heldMs,
   steer,
 } from './contexts.ts';
+import { type Downs, refusedOnPurpose, whileDown } from './down.ts';
 import { encoded, forwardedNoneMatch } from './encode.ts';
+import { hold, linger, pipeDown } from './live.ts';
 import { CONNECTS_AT_ONCE } from './ports.ts';
 import { type Service, withoutIpv6 } from './process.ts';
 import { AHEAD_BYTES, headDelayMs, type Link, shaper } from './shaping.ts';
@@ -39,6 +40,9 @@ export interface Edge extends Service {
   /** The one public origin, over TLS: pages, API and sockets, as in production. */
   readonly origin: string;
   readonly trust: Trust;
+  /** Runs `work` with the upstream on `port` down on purpose, as a restart takes it: what it
+   *  refuses meanwhile is a 502, counted and not said. Resolves with the count. */
+  readonly whileDown: (port: number, work: () => Promise<void>) => Promise<number>;
 }
 
 /** A request as either protocol hands it over: HTTP/2, or HTTP/1.1 for upgrades and fallbacks. */
@@ -123,6 +127,8 @@ interface Router {
   readonly contexts: Map<string, EdgeContext>;
   /** The connections (HTTP/2 sessions, HTTP/1.1 sockets) that have paid for their handshakes. */
   readonly opened: WeakSet<object>;
+  /** The upstreams down on purpose (down.ts). */
+  readonly down: Downs;
 }
 
 /** The harness's own requests steer a context; they never reach the site or the backend. */
@@ -215,7 +221,7 @@ const answerWith =
     }
     after(wait, () => {
       // The browser may have gone (a closed tab, a navigation) before the answer came.
-      if (outgoing.destroyed || outgoing.headersSent) {
+      if (left(outgoing) || outgoing.headersSent) {
         body.destroy();
         return;
       }
@@ -224,12 +230,14 @@ const answerWith =
     });
   };
 
-/** A failed upstream is logged whatever its error, as only browsers abandon: a 502 while nothing
- *  was sent, else a reset with the error, as production's, since a plain end reads as whole. */
-const failWith = (outgoing: Outgoing, error: Error): void => {
-  console.error(`edge proxy: upstream ${error.message}`);
-  if (outgoing.destroyed) {
+/** An upstream failing while its browser waits is logged: a 502 if nothing was sent, else a reset,
+ *  as a plain end reads as whole. A browser gone first cut it in leaving, which is no fault. */
+const failWith = (outgoing: Outgoing, error: Error, said: boolean): void => {
+  if (left(outgoing)) {
     return;
+  }
+  if (said) {
+    console.error(`edge proxy: upstream ${error.message}`);
   }
   if (outgoing.headersSent) {
     outgoing.destroy(error);
@@ -256,9 +264,11 @@ const forward = (router: Router, exchange: Exchange): void => {
   };
   const upstream = request(options, answerWith(incoming, outgoing, onward));
   upstream.on('error', (error) => {
-    failWith(outgoing, error);
+    failWith(outgoing, error, !refusedOnPurpose(router.down, port, error));
   });
-  pipeline(body, upstream, report);
+  pipeline(body, upstream, () => {
+    // Said by the upstream's own handler, or a browser's leaving, which is no fault.
+  });
 };
 
 /** Carries each request (HTTP/2 stream or HTTP/1.1 exchange) across its context's link: the head
@@ -275,7 +285,7 @@ const proxy =
     const body = shaper(link);
     pipeline(incoming, body, report);
     after(wait + heldMs(context, incoming.url ?? '/'), () => {
-      if (outgoing.destroyed) {
+      if (left(outgoing)) {
         return;
       }
       const owed = faultFor(context, incoming.method ?? 'GET', incoming.url ?? '/');
@@ -306,31 +316,6 @@ const headOf = (answer: IncomingMessage, close: boolean): string => {
 
 const BAD_GATEWAY = 'HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\nContent-Length: 0\r\n\r\n';
 
-const lifetimeOf = (profile: NetworkProfile | undefined): NetworkProfile['socketLifetimeMs'] =>
-  profile === undefined ? undefined : profile.socketLifetimeMs;
-
-/** Holds an upgraded connection's sockets as its context's live ones; on a lossy profile both drop
- *  after a lifetime drawn from it, and that timer is the emulated fault. */
-const hold = (sockets: readonly Socket[], context: EdgeContext | undefined): void => {
-  if (context === undefined) {
-    return;
-  }
-  const lifetime = lifetimeOf(context.down.profile);
-  const drop = (): void => {
-    for (const socket of sockets) {
-      socket.destroy();
-    }
-  };
-  const timer = lifetime === undefined ? undefined : setTimeout(drop, randomInt(...lifetime));
-  for (const socket of sockets) {
-    context.live.add(socket);
-    socket.once('close', () => {
-      clearTimeout(timer);
-      context.live.delete(socket);
-    });
-  }
-};
-
 interface Upgrade {
   readonly incoming: IncomingMessage;
   readonly client: Socket;
@@ -352,13 +337,13 @@ const upgradeHeaders = (incoming: IncomingMessage, context: EdgeContext | undefi
   return headers;
 };
 
-/** As `failWith`: a 502 while nothing was sent, else the connection is cut. */
+/** As `failWith`: a 502 while nothing was sent, else the browser's leg ends, lingering. */
 const failUpgrade = (client: Socket, down: Transform, answered: boolean): void => {
   if (client.destroyed) {
     return;
   }
   if (answered) {
-    client.destroy();
+    linger(client);
   } else {
     down.end(BAD_GATEWAY);
   }
@@ -381,7 +366,7 @@ const send = (router: Router, { incoming, client, up, down, context }: Upgrade):
     down.write(rest);
     pipeline(up, socket, report);
     pipeline(socket, down, report);
-    hold([client, socket], context);
+    hold(client, socket, context);
   });
   upstream.on('response', (answer: IncomingMessage) => {
     answered.now = true;
@@ -393,7 +378,9 @@ const send = (router: Router, { incoming, client, up, down, context }: Upgrade):
     pipeline(answer, down, report);
   });
   upstream.on('error', (error) => {
-    console.error(`edge proxy: upstream ${error.message}`);
+    if (!refusedOnPurpose(router.down, port, error)) {
+      console.error(`edge proxy: upstream ${error.message}`);
+    }
     failUpgrade(client, down, answered.now);
   });
   upstream.end();
@@ -409,7 +396,7 @@ const upgrade =
     client.on('error', report);
     up.write(head);
     client.pipe(up);
-    pipeline(down, client, report);
+    pipeDown(down, client);
     const bytes = headBytes(incoming.rawHeaders);
     after(headDelayMs(upOf(context), bytes, owedRtts(router, incoming)), () => {
       send(router, { incoming, client, up, down, context });
@@ -476,7 +463,12 @@ export const startEdge = async (
   signing: EdgeSigning = {},
 ): Promise<Edge> => {
   const { key, cert, trust } = await makeEdgeCertificate(signal, signing);
-  const router: Router = { upstreams, contexts: new Map(), opened: new WeakSet() };
+  const router: Router = {
+    upstreams,
+    contexts: new Map(),
+    opened: new WeakSet(),
+    down: new Map(),
+  };
   const sockets = new Set<Socket>();
   const servers = [
     edgeServer(router, { key, cert }, sockets),
@@ -492,7 +484,12 @@ export const startEdge = async (
   try {
     const port = await listening(servers[0], 0, '127.0.0.1');
     await listening(servers[1], port, '::1').catch(withoutIpv6);
-    return { origin: `https://localhost:${String(port)}`, trust, stop };
+    return {
+      origin: `https://localhost:${String(port)}`,
+      trust,
+      stop,
+      whileDown: whileDown(router.down),
+    };
   } catch (error) {
     await stop();
     throw error;
