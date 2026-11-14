@@ -11,6 +11,22 @@ config:
   checkExhaustiveness: false
   excludes: ''
 
+# The console says what fails, one line a finding, and nothing else: no statistics, no complexity
+# report and no notice of where the reports were written, so a passing run logs nothing.
+console-reports:
+  active: true
+  exclude:
+    - 'ComplexityReport'
+    - 'FileBasedFindingsReport'
+    - 'FindingsReport'
+    - 'NotificationReport'
+    - 'ProjectStatisticsReport'
+
+processors:
+  active: true
+  exclude:
+    - 'DetektProgressListener'
+
 comments:
   # A licence header follows the repo's own template, which kit can't name.
   AbsentOrWrongFileLicense:
