@@ -243,7 +243,8 @@ const pageSnapshot = (result: TestResult): string[] =>
       return shown;
     });
 
-/** What a config hands the reporter: the setup's file, which the slow-file report leaves out. */
+/** What a config hands the reporter: the file its setup projects match, whose tests the slow-file
+ *  report leaves out. */
 export interface StdoutOptions {
   readonly setupFile?: string;
 }
@@ -324,9 +325,8 @@ export default class StdoutReporter implements Reporter {
   }
 
   public onTestEnd(test: TestCase, result: TestResult): void {
-    const { file } = test.location;
-    if (file !== this.#setupFile) {
-      this.#slowFiles.add(test.titlePath()[1] ?? '', file, result);
+    if (!this.#isSetup(test)) {
+      this.#slowFiles.add(test.titlePath()[1] ?? '', test.location.file, result);
     }
     for (const attachment of result.attachments) {
       const journey = attachedJson(attachment, JOURNEY_ATTACHMENT);
@@ -342,6 +342,13 @@ export default class StdoutReporter implements Reporter {
     if (result.status === 'failed' || result.status === 'timedOut') {
       this.#printFailure(test, result);
     }
+  }
+
+  /** Whether `test` is the setup's, told by its project's match, not its location: from the
+   *  published build, a source map moves the location to the source beside the compiled file. */
+  #isSetup(test: TestCase): boolean {
+    const project = test.parent.project();
+    return project !== undefined && project.testMatch === this.#setupFile;
   }
 
   #record({ target, steps }: Measured): void {
