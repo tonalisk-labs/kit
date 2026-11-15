@@ -63,19 +63,21 @@ await test('the same file under two projects is two files, and only the 5 slowes
   );
 });
 
-const testIn = (file: string, project: string): object => ({
+/** A test as the reporter sees it: its file, its project, and the file that project matches. */
+const testIn = (file: string, project: string, testMatch: string): object => ({
   location: { file },
+  parent: { project: (): object => ({ name: project, testMatch }) },
   titlePath: (): string[] => ['', project, file, 'a test'],
 });
 
-await test('the reporter names a slow file but leaves out the setup file it was given', async () => {
+await test('the reporter names a slow file but leaves out its setup project', async () => {
   const printed: string[] = [];
   const { log } = console;
   console.log = (line: string): void => {
     printed.push(line);
   };
   try {
-    const reporter = new StdoutReporter({ setupFile: '/repo/kit/stack.setup.ts' });
+    const reporter = new StdoutReporter({ setupFile: '/repo/kit/dist/stack.setup.js' });
     const suite = { allTests: (): object[] => [] };
     Reflect.apply(reporter.onBegin.bind(reporter), undefined, [
       { projects: [], rootDir: '/repo' },
@@ -83,9 +85,10 @@ await test('the reporter names a slow file but leaves out the setup file it was 
     ]);
     const result = { status: 'passed', attachments: [], steps: [], workerIndex: 0 };
     const long = Object.assign(result, { duration: 9 * MINUTE });
+    // As from the published build: the setup's location is its source, where its source map points.
     for (const ran of [
-      testIn('/repo/kit/stack.setup.ts', 'site/setup'),
-      testIn('/repo/tests/journeys.spec.ts', 'site/visual-01'),
+      testIn('/repo/kit/src/stack.setup.ts', 'site/setup', '/repo/kit/dist/stack.setup.js'),
+      testIn('/repo/tests/journeys.spec.ts', 'site/visual-01', '**/*.spec.ts'),
     ]) {
       Reflect.apply(reporter.onTestEnd.bind(reporter), undefined, [ran, long]);
     }
