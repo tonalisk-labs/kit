@@ -13,13 +13,7 @@ import { createServer as createNetServer } from 'node:net';
 import path from 'node:path';
 import { test } from 'node:test';
 
-import {
-  CPU_GATE_ENV,
-  holdTestTurn,
-  holdTurn,
-  type TestTimeout,
-  widenTestTurn,
-} from '../src/stack/control.ts';
+import { holdTestTurn, holdTurn, widenTestTurn } from '../src/stack/control.ts';
 import { isAbsent, joinGate } from '../src/stack/gate-member.ts';
 import {
   GATE_MARK,
@@ -28,17 +22,10 @@ import {
   LAUNCH,
   type Semaphore,
   semaphore,
-  serveGate,
   WHOLE,
 } from '../src/stack/gate-server.ts';
 import { freePort } from '../src/stack/ports.ts';
-
-/** A gate of `slots` in this process, on a port of its own. */
-const gateOf = async (slots: number): Promise<number> => {
-  const port = await freePort();
-  assert.notEqual(await serveGate(port, slots), undefined);
-  return port;
-};
+import { gateOf, inRun, timeoutOf } from './gate-run.ts';
 
 const SERVED = 'http.server.request.start';
 
@@ -147,30 +134,6 @@ await test('runs joining and leaving at once all find one gate, started as neede
   };
   await Promise.all(Array.from({ length: 8 }, async () => runner(5)));
 });
-
-/** A test's timeout as a widening test sees it, with every timeout it is moved to. */
-const timeoutOf = (timeout: number): TestTimeout & { readonly moved: number[] } => {
-  const moved: number[] = [];
-  return {
-    timeout,
-    moved,
-    setTimeout: (ms) => {
-      moved.push(ms);
-    },
-  };
-};
-
-/** Runs `work` as a test of a run in a gate of two slots, as the global setup leaves one. */
-const inRun = async (work: (turns: string) => Promise<void>): Promise<void> => {
-  const run = await joinGate(await gateOf(2));
-  process.env[CPU_GATE_ENV] = run.turns;
-  try {
-    await work(run.turns);
-  } finally {
-    Reflect.deleteProperty(process.env, CPU_GATE_ENV);
-    run.leave();
-  }
-};
 
 await test('a widened test waits for every slot, its timeout stopped, then moved on by the wait', async () =>
   inRun(async (turns) => {

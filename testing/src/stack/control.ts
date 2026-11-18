@@ -2,6 +2,7 @@ import { request } from 'node:http';
 
 import { test } from '@playwright/test';
 
+import type { Progress } from '../stuck.ts';
 import { holdCpuTurn } from './gate-member.ts';
 import { WHOLE } from './gate-server.ts';
 import { openHold } from './hold.ts';
@@ -192,18 +193,40 @@ export interface TestTimeout {
   readonly setTimeout: (ms: number) => void;
 }
 
+/** A running test's watch for standing still (stuck.ts), as a wait outside its work pauses it. */
+type Watched = Pick<Progress, 'pause'>;
+
+/** A test outside the fixtures, as the gate's own tests are, widens with no watch to pause. */
+const UNWATCHED: Watched = { pause: () => (): void => undefined };
+
+/** The running test's watch in this worker, which runs one test at a time. */
+const watching: { progress: Watched } = { progress: UNWATCHED };
+
+/** Makes `progress` the running test's watch, until the returned call as the test ends. */
+export const testWatched = (progress: Watched): (() => void) => {
+  watching.progress = progress;
+  return () => {
+    watching.progress = UNWATCHED;
+  };
+};
+
+/** What a widening test's watch says it last waited for, should it stand still after the grant. */
+const WIDENING = 'the wait for every CPU slot';
+
 /** Trades the slot for every slot, the slot going first, so two widening tests never wait on each
- *  other. The wait is the run's queue, not the test's work, so the test's timeout stops for it. */
-const widen = async (held: TestTurn, info: TestTimeout): Promise<void> => {
+ *  other. The wait is the run's queue, not the test's work: its timeout and watch stop for it. */
+const widen = async (held: TestTurn, info: TestTimeout, progress: Watched): Promise<void> => {
   held.release();
   const { timeout } = info;
   const asked = performance.now();
   if (timeout > 0) {
     info.setTimeout(0);
   }
+  const resume = progress.pause(WIDENING);
   try {
     held.release = await holdTurn(`${runTurns()}/${WHOLE}`, held.ended.signal);
   } finally {
+    resume();
     if (timeout > 0) {
       info.setTimeout(timeout + Math.ceil(performance.now() - asked));
     }
@@ -212,12 +235,15 @@ const widen = async (held: TestTurn, info: TestTimeout): Promise<void> => {
 
 /** Widens the running test's turn to every slot, to its end, for figures other work would skew.
  *  The widening is claimed before any wait, so a test widens once however often it asks. */
-export const widenTestTurn = async (info: TestTimeout = test.info()): Promise<void> => {
+export const widenTestTurn = async (
+  info: TestTimeout = test.info(),
+  progress: Watched = watching.progress,
+): Promise<void> => {
   const { held } = worker;
   if (held === undefined) {
     throw new Error('only a running test, holding its CPU turn, widens it');
   }
-  held.widened ??= widen(held, info);
+  held.widened ??= widen(held, info, progress);
   await held.widened;
 };
 
