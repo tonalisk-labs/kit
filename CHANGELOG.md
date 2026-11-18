@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/tonalisk-labs/kit/compare/v1.1.1...v1.1.2) (2026-11-18)
+
+
+### Bug Fixes
+
+* **ci:** apt fetches Playwright's packages from Ubuntu's own archives, each fetch bounded at 10 minutes ([#49](https://github.com/tonalisk-labs/kit/issues/49)) ([e8636eb](https://github.com/tonalisk-labs/kit/commit/e8636eb871366ea75d130f04276c4d6ce12af8b3))
+
 ## [1.1.1](https://github.com/tonalisk-labs/kit/compare/v1.1.0...v1.1.1) (2026-11-18)
 
 
