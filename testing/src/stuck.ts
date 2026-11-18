@@ -14,9 +14,13 @@ export const STILL_MS = 132_000;
  *  An idle worker spends about a ninth of it, an action or a Lighthouse report far more. */
 const WORKING_SHARE = 0.001;
 
-/** The test's watch: told of each thing that moves, and stopped as the test ends. */
+/** The test's watch: told of each thing that moves, paused while the test waits on what isn't its
+ *  own work, and stopped as the test ends. */
 export interface Progress {
   readonly moved: (what: string) => void;
+  /** Stops the watch for `wait`, a queue the test stands in, as its timeout stops; the answer, as
+   *  the wait ends, sets it going again from then, `wait` the last that moved. */
+  readonly pause: (wait: string) => () => void;
   readonly stop: () => void;
 }
 
@@ -46,6 +50,7 @@ export const watchProgress = ({
     last: 'the test began',
     since: 0,
     cancel: (): void => undefined,
+    paused: false,
     done: false,
   };
   const arm = (): void => {
@@ -63,10 +68,21 @@ export const watchProgress = ({
   arm();
   return {
     moved: (what) => {
-      if (!state.done) {
+      if (!state.done && !state.paused) {
         state.last = what;
         arm();
       }
+    },
+    pause: (wait) => {
+      state.paused = true;
+      state.cancel();
+      return () => {
+        state.paused = false;
+        if (!state.done) {
+          state.last = wait;
+          arm();
+        }
+      };
     },
     stop: () => {
       state.done = true;

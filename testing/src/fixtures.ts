@@ -29,6 +29,7 @@ import {
   deadlineFrom,
   holdTestTurn,
   testBegins,
+  testWatched,
   waitedFor,
   HOST_ENV,
   LINUX_ENV,
@@ -74,7 +75,7 @@ interface StackFixtures {
 }
 
 /** Runs a test under its watch: should it stand still, it ends through its own timeout, and its
- *  teardown says what stood still. Holds' waits come before it, as they are not the test's. */
+ *  teardown says what stood still. Holds' waits come before it, and a widening's pauses it. */
 const watchedTest = async (
   provide: (progress: Progress) => Promise<void>,
   testInfo: TestInfo,
@@ -87,9 +88,11 @@ const watchedTest = async (
       endStuck(testInfo, performance.now() - began);
     },
   });
+  const unwatched = testWatched(progress);
   try {
     await provide(progress);
   } finally {
+    unwatched();
     progress.stop();
   }
   if (stood.last !== undefined) {

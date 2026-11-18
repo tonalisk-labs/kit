@@ -1,6 +1,6 @@
 // The watch over a test's progress (stuck.ts): a wait that nothing answers is stuck once STILL_MS
 // passes, naming what last moved; a test that moves, however slowly, never is; nor is one whose
-// worker works with no page event, as a Lighthouse report is written.
+// worker works with no page event, as a Lighthouse report is written; nor one paused in a queue.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
@@ -75,6 +75,30 @@ await test('a watch stopped as its test ends says nothing after', () => {
   progress.stop();
   advance(10 * STILL_MS);
   progress.moved('a late frame');
+  advance(10 * STILL_MS);
+  assert.deepEqual(stuck, []);
+});
+
+await test('a paused watch is never stuck, whatever moves, and goes again from the end of the wait', () => {
+  const { progress, advance, stuck } = watched();
+  advance(STILL_MS - 1);
+  const resume = progress.pause('a queue');
+  advance(10 * STILL_MS);
+  progress.moved('a frame in the queue');
+  advance(10 * STILL_MS);
+  assert.deepEqual(stuck, [], 'nothing counted while it waits');
+  resume();
+  advance(STILL_MS - 1);
+  assert.deepEqual(stuck, [], 'a whole stretch from the end of the wait');
+  advance(1);
+  assert.deepEqual(stuck, ['a queue'], 'the wait named as what last moved');
+});
+
+await test('a watch stopped while paused says nothing once its wait ends', () => {
+  const { progress, advance, stuck } = watched();
+  const resume = progress.pause('a queue');
+  progress.stop();
+  resume();
   advance(10 * STILL_MS);
   assert.deepEqual(stuck, []);
 });
