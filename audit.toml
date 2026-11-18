@@ -1,0 +1,13 @@
+# The advisories kit's audit lets pass (rules/audit.ts), each by its ID until its day, at most 90
+# days off: only those no release fixes yet, in a tool kit's own check runs. Nothing kit ships may
+# carry one, which `npm audit --omit=dev` holds. osv-scanner reads these tables as they are.
+
+[[IgnoredVulns]]
+id = "GHSA-fc5q-39xc-vjpf"
+effectiveUntil = 2027-02-15
+reason = """\
+picomatch can take exponential time on a glob that repeats a single-branch extglob. In kit it \
+comes only with the tools kit's own check runs, Astro, Vite, knip and their file walkers, on \
+globs written in kit's own configuration and tests. Nothing a person sends reaches it, and \
+nothing kit ships depends on it. No picomatch release fixes it yet (4.0.7, the latest, is \
+affected)."""

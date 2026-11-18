@@ -36,6 +36,7 @@
     "rules",
     "!**/tests",
     "!theme/themes/build.ts",
+    "!rules/audit.ts",
     "!theme/coverage.json"
   ],
   "type": "module",

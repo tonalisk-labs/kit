@@ -179,12 +179,14 @@ done
 
 # The template's audit, on kit's own tree, which every repo installs; and the Renovate preset holds
 # a new npm or crate release for 3 days, so a hijacked one can be pulled before it is proposed.
+# What kit ships carries no advisory at all, so one audit.toml lets pass is only its tools'.
 [tasks.audit]
 run = [
-  "npm audit --audit-level=info",
+  "npm audit --omit=dev --audit-level=info",
   "npm audit signatures",
   "lockfile-lint --path package-lock.json --allowed-hosts npm --validate-https",
-  "osv-scanner scan source --config template/osv-scanner.toml --lockfile package-lock.json --licenses=MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause,ISC,Unicode-3.0,Zlib,CDLA-Permissive-2.0,0BSD,BlueOak-1.0.0,CC0-1.0,Python-2.0",
+  # npm audit's whole tree and osv-scanner, under the template's config, held to audit.toml.
+  "node rules/audit.ts osv-scanner scan source --lockfile package-lock.json --licenses=MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause,ISC,Unicode-3.0,Zlib,CDLA-Permissive-2.0,0BSD,BlueOak-1.0.0,CC0-1.0,Python-2.0",
   "jq -e '.extends | index(\"security:minimumReleaseAgeNpm\") and index(\"security:minimumReleaseAgeCrate\")' default.json > /dev/null",
 ]
 

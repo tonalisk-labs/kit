@@ -8,5 +8,5 @@
     "rewriteRelativeImportExtensions": true
   },
   "include": ["testing/src", "testing/perf-budgets.json", "theme", "rules"],
-  "exclude": ["**/tests", "theme/themes/build.ts"]
+  "exclude": ["**/tests", "theme/themes/build.ts", "rules/audit.ts"]
 }
