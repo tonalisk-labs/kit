@@ -23,8 +23,8 @@ package that exists. On npmjs.com, add GitHub Actions as its trusted publisher (
 `publish.yml`, environment `npm`), require two-factor authentication and disallow tokens.
 
 The check and the journeys take Playwright's browsers and their Ubuntu packages from a cache keyed
-on the runner image and Playwright's version. Filling it needs Ubuntu's mirrors and Playwright's
-CDN, so a first run after either changes fails while they're down, as does a release's build, which
-caches nothing. A private repo runs its checks locally, where `mise run downstream` also checks this
+on the runner image and Playwright's version. Filling it, as a release's build does each time, reads
+Ubuntu's own archives, not the image's mirror list, and Playwright's CDN, in at most 10 minutes or
+the run fails. A private repo runs its checks locally, where `mise run downstream` also checks this
 build in each site checked out beside kit. Until the sites are on GitHub, run it on the Mac before
 merging each release-please PR, and attach its log to the PR.
