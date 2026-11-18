@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/tonalisk-labs/kit/compare/v1.1.0...v1.1.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **testing:** a test waiting to widen its CPU turn is never called stuck, as its timeout stops too ([#47](https://github.com/tonalisk-labs/kit/issues/47)) ([71d17c4](https://github.com/tonalisk-labs/kit/commit/71d17c4b5560e61a480d1ba4c23489bff7e8b196))
+
 ## [1.1.0](https://github.com/tonalisk-labs/kit/compare/v1.0.7...v1.1.0) (2026-11-15)
 
 
