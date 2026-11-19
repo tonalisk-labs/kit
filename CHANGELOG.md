@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3](https://github.com/tonalisk-labs/kit/compare/v1.1.2...v1.1.3) (2026-11-19)
+
+
+### Bug Fixes
+
+* **testing:** a control is judged in the run that finds the page at rest, so a late entry isn't caught mid-way ([#51](https://github.com/tonalisk-labs/kit/issues/51)) ([1b07f24](https://github.com/tonalisk-labs/kit/commit/1b07f2465d1fc802056fa4ffc782906df3b1b3b9))
+
 ## [1.1.2](https://github.com/tonalisk-labs/kit/compare/v1.1.1...v1.1.2) (2026-11-18)
 
 
