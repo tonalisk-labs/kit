@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 
 import { inPage } from './in-page.ts';
-import { untilStill } from './still.ts';
+import { STILL_KIT, still } from './still.ts';
 
 /** What can take focus from the keyboard, before tabindex, disabled and visibility are weighed. */
 const FOCUSABLE =
@@ -276,12 +276,71 @@ const invisibleWhenFocused = ({
   return hidden.map((element) => `${focusableName(element)} takes focus but cannot be seen`);
 };
 
+/** How many times the page is waited on to come to rest before its controls are judged as they
+ *  stand: a box that moves for ever never would. */
+const MOST_LOOKS = 10;
+
+/** In the page: the box of each control a judgement weighs, to tell whether one moved. */
+const boxesOf = ({
+  selector,
+  exempt,
+}: {
+  readonly selector: string;
+  readonly exempt?: string | undefined;
+}): string =>
+  [...globalThis.document.querySelectorAll(selector)]
+    .filter((element) => inTabOrder(element) && (exempt === undefined || !element.matches(exempt)))
+    .map((element) => {
+      const { left, top, width, height } = element.getBoundingClientRect();
+      return `${String(left)},${String(top)},${String(width)},${String(height)}`;
+    })
+    .join(';');
+
+/** In the page: once `frames` animation frames have passed, each an empty animation's run on the
+ *  page's own timeline, which no page clock holds as it holds requestAnimationFrame. */
+const framesPassed = async (frames: number): Promise<void> => {
+  if (frames > 0) {
+    await globalThis.document.documentElement.animate([], { duration: 1 }).finished;
+    await framesPassed(frames - 1);
+  }
+};
+
+/** In the page: whether a finite motion is running, or about to start. */
+const moving = (): boolean =>
+  globalThis.document.getAnimations().some((animation) => {
+    const timing = animation.effect === null ? undefined : animation.effect.getComputedTiming();
+    const finite = timing === undefined || timing.endTime !== Number.POSITIVE_INFINITY;
+    return finite && (animation.pending || animation.playState === 'running');
+  });
+
+/** In the page: the controls hidden once focused, judged in the same run that finds the page at
+ *  rest, with no motion running and no box moved across 2 frames; else it waits on it again. */
+const invisibleAtRest = async ({
+  selector,
+  exempt,
+  looks,
+}: {
+  readonly selector: string;
+  readonly exempt?: string | undefined;
+  readonly looks: number;
+}): Promise<string[]> => {
+  await still();
+  const before = boxesOf({ selector, exempt });
+  await framesPassed(2);
+  if (looks > 1 && (moving() || boxesOf({ selector, exempt }) !== before)) {
+    return invisibleAtRest({ selector, exempt, looks: looks - 1 });
+  }
+  return invisibleWhenFocused({ selector, exempt });
+};
+
+/** The helpers `invisibleAtRest` names, itself among them, beside `KIT`'s and `STILL_KIT`'s. */
+const AT_REST = { boxesOf, framesPassed, moving, invisibleWhenFocused, invisibleAtRest };
+const AT_REST_KIT = Object.assign(AT_REST, KIT, STILL_KIT);
+
 /** Every control that takes focus without showing itself, bar those `exempt` matches, as failure
  *  messages; judged at rest, as a dialog still fading in shows its controls a moment later. */
-export const invisibleFocusables = async (page: Page, exempt?: string): Promise<string[]> => {
-  await untilStill(page);
-  return inPage(page, KIT)(invisibleWhenFocused, { selector: FOCUSABLE, exempt });
-};
+export const invisibleFocusables = async (page: Page, exempt?: string): Promise<string[]> =>
+  inPage(page, AT_REST_KIT)(invisibleAtRest, { selector: FOCUSABLE, exempt, looks: MOST_LOOKS });
 
 const RINGS = 'sites.testing.rings';
 
