@@ -100,3 +100,93 @@ await test('a control that takes focus unseen is named, a frame by where it came
     await browser.close();
   }
 });
+
+/** A page whose script `act` runs once, the moment the page is first found still: when its
+ *  document.getAnimations() first lists nothing, as still()'s last look does. */
+const afterStill = (body: string, act: string): string => `<main>${body}</main>
+<script>
+  const listed = document.getAnimations.bind(document);
+  let acted = false;
+  document.getAnimations = () => {
+    const found = listed();
+    if (found.length === 0 && !acted) {
+      acted = true;
+      setTimeout(() => {
+        ${act}
+      });
+    }
+    return found;
+  };
+</script>`;
+
+/** An offer that opens late, as one under load does, and fades in after 3 s at opacity 0. */
+const LATE_OFFER = afterStill(
+  `<button>seen</button>
+  <div id="offer" hidden style="opacity: 0; transition: opacity 0.2s 3s"><button>Save a passkey</button></div>`,
+  `const offer = document.getElementById('offer');
+  offer.hidden = false;
+  offer.getBoundingClientRect();
+  offer.style.opacity = '1';`,
+);
+
+/** A control in its place throughout that fades in late, after 3 s at opacity 0: no box moves,
+ *  so only a motion running tells it isn't at rest. */
+const LATE_FADE = afterStill(
+  '<button>seen</button><button id="soft" style="opacity: 0; transition: opacity 0.2s 3s">Soft</button>',
+  "document.getElementById('soft').style.opacity = '1';",
+);
+
+/** A control a script moves in late, 100 px a frame from 1000 px off screen: no motion on the
+ *  page's timeline, so only its box moving tells it isn't at rest. */
+const LATE_MOVE = afterStill(
+  '<button>seen</button><button id="moved" style="position: fixed; top: 20px; left: -1000px">Moved</button>',
+  `const moved = document.getElementById('moved');
+  const step = (left) => {
+    moved.style.left = left + 'px';
+    if (left < 200) {
+      requestAnimationFrame(() => {
+        step(left + 100);
+      });
+    }
+  };
+  requestAnimationFrame(() => {
+    step(-900);
+  });`,
+);
+
+/** In one engine: each late page judged once at rest, and a page under a paused page clock, whose
+ *  frames never come. */
+const atRest = async (engine: BrowserType): Promise<readonly (readonly string[])[]> => {
+  const browser = await engine.launch();
+  try {
+    const late = await Promise.all(
+      [LATE_OFFER, LATE_FADE, LATE_MOVE].map(async (html) => {
+        const page = await browser.newPage();
+        await page.setContent(html);
+        return invisibleFocusables(page);
+      }),
+    );
+    const paused = await browser.newPage();
+    await paused.clock.install();
+    await paused.clock.pauseAt(Date.now() + 60_000);
+    await paused.setContent(
+      '<main><button>seen</button><button style="opacity: 0">faded</button></main>',
+    );
+    return [...late, await invisibleFocusables(paused)];
+  } finally {
+    await browser.close();
+  }
+};
+
+await Promise.all(
+  ENGINES.map(async ([name, engine]) =>
+    test(`${name}: controls are judged at rest: an offer opened, a fade begun and a box moved after the wait for stillness, and a paused clock's page`, async () => {
+      assert.deepEqual(await atRest(engine), [
+        [],
+        [],
+        [],
+        ['<button> "faded" takes focus but cannot be seen'],
+      ]);
+    }),
+  ),
+);
