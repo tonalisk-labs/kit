@@ -5,6 +5,7 @@ import type { CpuInfo } from 'node:os';
 import { test } from 'node:test';
 
 import {
+  BOUND_MS,
   busyShare,
   CEILING,
   CEILING_ENV,
@@ -15,13 +16,11 @@ import {
   WINDOW_MS,
 } from '../src/floors/quiet.ts';
 
-const BOUND = 300_000;
-
 /** A machine whose busy shares come in `shares`, the last one lasting, each read taking a window
  *  of a clock that moves only as it is read; and what the wait said. */
 const machine = (
   shares: readonly number[],
-  { ceiling = CEILING, bound = BOUND }: { ceiling?: number; bound?: number } = {},
+  { ceiling = CEILING, bound = BOUND_MS }: { ceiling?: number; bound?: number } = {},
 ): {
   readonly before: (what: string) => Promise<boolean>;
   readonly read: () => number;
@@ -51,7 +50,7 @@ await test('a busy machine is waited out until it stays quiet, said twice', asyn
   assert.equal(await before('a.perf.test.ts'), true);
   assert.equal(read(), 8);
   assert.deepEqual(said, [
-    'a.perf.test.ts waits up to 300 s for the machine to go quiet: its CPU is 90% busy, over ' +
+    'a.perf.test.ts waits up to 45 s for the machine to go quiet: its CPU is 90% busy, over ' +
       `the 25% ceiling (${CEILING_ENV})`,
     'a.perf.test.ts goes on after 4 s: the machine is quiet, its CPU 10% busy',
   ]);
@@ -73,6 +72,16 @@ await test('past the bound a busy machine goes on, said with its share', async (
     "a.perf.test.ts goes on, though the machine isn't quiet: its CPU is 95% busy, over the 25% " +
       'ceiling, past the 2 s a timed pass waits; judge a failing timing by that load',
   );
+});
+
+await test('a machine kept busy costs a pass 45 s once, and a lull 40 s in is caught', async () => {
+  const busy = machine([95]);
+  assert.equal(await busy.before('a.perf.test.ts'), false);
+  assert.equal(busy.read(), 45_000 / WINDOW_MS);
+  assert.match(busy.said.at(-1) ?? '', /, past the 45 s a timed pass waits;/u);
+  const lull = machine([...Array.from({ length: 40_000 / WINDOW_MS }, () => 95), 10]);
+  assert.equal(await lull.before('a.perf.test.ts'), true);
+  assert.equal(lull.read(), 40_000 / WINDOW_MS + QUIET_SAMPLES);
 });
 
 await test('quiet samples past the bound still count towards quiet', async () => {

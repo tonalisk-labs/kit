@@ -11,10 +11,9 @@ import { parseArgs } from 'node:util';
 
 import { inWholeTurn } from '../stack/gate-member.ts';
 import { GATE_PORT } from '../stack/gate-server.ts';
-import { STILLNESS } from '../stack/stall.ts';
 import { holdFloors, type Measured } from './hold.ts';
 import { measuredOnce } from './instances.ts';
-import { CEILING_ENV, ceilingOf, cpuSampler, quietBefore } from './quiet.ts';
+import { BOUND_MS, CEILING_ENV, ceilingOf, cpuSampler, quietBefore } from './quiet.ts';
 import { PHASE_ENV, phaseOf, testFiles } from './timed.ts';
 
 const { values, positionals } = parseArgs({
@@ -73,10 +72,6 @@ const name = process.env['npm_package_name'] ?? cwd;
 /** The CPU gate's port: the machine's own, or the one a test of this runner serves. */
 const GATE_PORT_ENV = 'KIT_CPU_GATE_PORT';
 
-/** The most a timed pass waits for quiet: half the gate's stall, so a wait and the file it holds
- *  every slot for stay inside the stillness after which other runs' waits there fail. */
-const QUIET_BOUND_MS = STILLNESS.stall / 2;
-
 /** Runs each timed file in its own whole turn at the CPU gate, once the machine is quiet: load
  *  that starts mid-pass is waited out before the next file, and other runs' turns go on between. */
 const timedEach = async (
@@ -110,7 +105,7 @@ const timedPass = async (files: readonly string[]): Promise<boolean> =>
       sample: cpuSampler(),
       now: () => performance.now(),
       ceiling,
-      bound: QUIET_BOUND_MS,
+      bound: BOUND_MS,
       say: (line) => {
         console.log(line);
       },
