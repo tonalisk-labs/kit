@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/tonalisk-labs/kit/compare/v1.1.3...v1.1.4) (2026-11-21)
+
+
+### Bug Fixes
+
+* **testing:** timed tests wait for a quiet machine, and the template hook's check runs without git's variables ([#53](https://github.com/tonalisk-labs/kit/issues/53)) ([c963400](https://github.com/tonalisk-labs/kit/commit/c963400f4ba6c7c2a2d93aaa1c31184e566f7d8b))
+
 ## [1.1.3](https://github.com/tonalisk-labs/kit/compare/v1.1.2...v1.1.3) (2026-11-19)
 
 
