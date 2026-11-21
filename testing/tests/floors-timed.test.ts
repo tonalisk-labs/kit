@@ -1,6 +1,7 @@
 // A workspace's timed tests run after the rest and on their own, and stay out of the coverage
 // pass: a fixture workspace's tests write down when each ran.
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -150,5 +151,27 @@ await test('a ceiling mistyped fails the run before any test runs', async () => 
   }).catch(String);
   assert.ok(said.includes(`${CEILING_ENV} is a whole percentage from 0 to 100, not lots`), said);
   assert.equal(await readFile(log, 'utf8'), '');
+  await rm(folder, { recursive: true });
+});
+
+await test('however many timed files run, each alone, the runner warns of nothing', async () => {
+  const { folder, log } = await workspace();
+  const timed = Array.from({ length: 6 }, (_unused, index) => `timed${String(index)}`);
+  await rm(path.join(folder, 'slow.perf.test.mjs'));
+  await Promise.all(
+    timed.map(async (name) =>
+      writeFile(path.join(folder, `${name}.perf.test.mjs`), writer(log, name)),
+    ),
+  );
+  const warnings = path.join(folder, 'warnings.log');
+  await run(process.execPath, [`--redirect-warnings=${warnings}`, RUNNER], {
+    cwd: folder,
+    env: ownEnvironment(),
+    signal: new AbortController().signal,
+  });
+  const written = await readFile(log, 'utf8');
+  const ran = written.trim().split('\n');
+  assert.deepEqual(ran.filter((name) => name.startsWith('timed')).toSorted(byName), timed);
+  assert.equal(existsSync(warnings) ? await readFile(warnings, 'utf8') : '', '');
   await rm(folder, { recursive: true });
 });

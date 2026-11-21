@@ -41,13 +41,16 @@ const runOptions = (
   files,
 });
 
-/** Runs `files` plainly, shown as `node --test` shows them; true when none failed. */
+/** Runs `files` plainly, shown as `node --test` shows them; true when none failed. Piped, not a
+ *  pipeline's last stage, which leaves its listeners on stdout after every run. */
 const passes = async (files: string[], together: boolean): Promise<boolean> => {
   let failed = false;
   const tests = run(runOptions(files, { coverage: false, together })).on('test:fail', () => {
     failed = true;
   });
-  await pipeline(tests, new SpecReporter(), process.stdout, { end: false });
+  const shown = new SpecReporter();
+  shown.pipe(process.stdout, { end: false });
+  await pipeline(tests, shown);
   return !failed;
 };
 
