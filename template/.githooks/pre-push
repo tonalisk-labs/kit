@@ -57,14 +57,14 @@ ${bad}"
 	changes="$(git status --porcelain)"
 	[ -z "${changes}" ] || die "the working tree holds changes the push leaves out: commit them first"
 	# A hook run from a linked worktree gets GIT_DIR, which outranks `-C`, so a check's scratch `git
-	# init` would reinitialise this repository: the check runs without git's variables for it. Its
-	# timed tests wait for a quiet machine at kit's own ceiling, whatever a busy machine's runs set.
+	# init` would reinitialise this repository: the check runs without git's variables for it.
 	top="$(git rev-parse --show-toplevel)"
 	(
 		cd "${top}"
 		for name in $(git rev-parse --local-env-vars); do
 			unset "${name}"
 		done
+		# Its timed tests wait for quiet at kit's own ceiling, whatever a busy machine's runs set.
 		unset KIT_QUIET_CEILING
 		mise run check < /dev/null
 	) || die "mise run check failed, so main wasn't pushed"
