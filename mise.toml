@@ -131,7 +131,8 @@ done
 grep -q '^run = "git config core.hooksPath .githooks"$' "$work/private/mise.toml" \
   || fail "private's hooks task doesn't turn on .githooks"
 # A push from a linked worktree hands the hook GIT_DIR, and the check must get none of git's
-# variables for the repository: a stand-in mise writes down their names, never values.
+# variables for the repository, nor a busy machine's quiet ceiling: a stand-in mise writes down
+# their names, never values.
 (
   hooked="$work/hooked"
   mkdir -p "$hooked/bin"
@@ -140,7 +141,8 @@ grep -q '^run = "git config core.hooksPath .githooks"$' "$work/private/mise.toml
   owned=$(git rev-parse --local-env-vars)
   for name in $owned; do unset "$name"; done
   printf '%s\n' '#!/bin/sh' 'env | sed -n "s/^\(GIT_[A-Z_]*\)=.*/\1/p" > "$0.git"' \
-    'pwd -P > "$0.folder"' > "$hooked/bin/mise"
+    'pwd -P > "$0.folder"' 'printf "%s" "${KIT_QUIET_CEILING+set}" > "$0.ceiling"' \
+    > "$hooked/bin/mise"
   chmod +x "$hooked/bin/mise"
   as='-c user.name=kit -c user.email=kit@example.com -c commit.gpgsign=false'
   git -C "$work/private" symbolic-ref HEAD refs/heads/main
@@ -150,13 +152,16 @@ grep -q '^run = "git config core.hooksPath .githooks"$' "$work/private/mise.toml
   git -C "$work/private" worktree add -q -b lane "$hooked/lane"
   git -C "$hooked/lane" $as commit -q --allow-empty -m 'chore: two'
   git -C "$work/private" config core.hooksPath .githooks
-  PATH="$hooked/bin:$PATH" git -C "$hooked/lane" push -q "$hooked/remote.git" HEAD:main
+  KIT_QUIET_CEILING=100 PATH="$hooked/bin:$PATH" \
+    git -C "$hooked/lane" push -q "$hooked/remote.git" HEAD:main
   [ "$(cat "$hooked/bin/mise.folder")" = "$(cd "$hooked/lane" && pwd -P)" ] \
     || fail "private's pre-push hook ran the check away from the checkout's top"
   for name in $owned; do
     ! grep -q -x "$name" "$hooked/bin/mise.git" \
       || fail "private's pre-push hook handed the check $name"
   done
+  [ ! -s "$hooked/bin/mise.ceiling" ] \
+    || fail "private's pre-push hook handed the check KIT_QUIET_CEILING"
 )
 # Every repo audits its supply chain as kit's own audit does, to the same licences.
 licences=$(grep -o -- '--licenses=[^ "]*' mise.toml)
