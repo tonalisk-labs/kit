@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // A workspace's tests as `node --test` runs them (its arguments: globs and `--import <module>`),
-// those timing code then alone, one at a time, holding the machine's CPU gate whole; the rest
-// under coverage, held to its floors. KIT_TEST_PHASE=untimed or timed takes one phase, so the
-// timed run can have the machine alone.
+// those timing code then alone, one at a time, holding the machine's CPU gate whole once the
+// machine is quiet; the rest under coverage, held to its floors. KIT_TEST_PHASE=untimed or timed
+// takes one phase, so the timed run can have the machine alone.
+import path from 'node:path';
 import { finished, pipeline } from 'node:stream/promises';
 import { run, type RunOptions } from 'node:test';
 import { spec as SpecReporter } from 'node:test/reporters';
@@ -10,8 +11,10 @@ import { parseArgs } from 'node:util';
 
 import { inWholeTurn } from '../stack/gate-member.ts';
 import { GATE_PORT } from '../stack/gate-server.ts';
+import { STILLNESS } from '../stack/stall.ts';
 import { holdFloors, type Measured } from './hold.ts';
 import { measuredOnce } from './instances.ts';
+import { CEILING_ENV, ceilingOf, cpuSampler, quietBefore } from './quiet.ts';
 import { PHASE_ENV, phaseOf, testFiles } from './timed.ts';
 
 const { values, positionals } = parseArgs({
@@ -67,13 +70,48 @@ const name = process.env['npm_package_name'] ?? cwd;
 /** The CPU gate's port: the machine's own, or the one a test of this runner serves. */
 const GATE_PORT_ENV = 'KIT_CPU_GATE_PORT';
 
-/** Runs the timed files one at a time, holding every slot of the machine's CPU gate: the tests of
- *  other runs, which take their turns there, wait, so none shares the cores they're timed on. */
-const timedPass = async (files: string[]): Promise<boolean> =>
-  inWholeTurn(
-    async () => passes(files, false),
+/** The most a timed pass waits for quiet: half the gate's stall, so a wait and the file it holds
+ *  every slot for stay inside the stillness after which other runs' waits there fail. */
+const QUIET_BOUND_MS = STILLNESS.stall / 2;
+
+/** Runs each timed file in its own whole turn at the CPU gate, once the machine is quiet: load
+ *  that starts mid-pass is waited out before the next file, and other runs' turns go on between. */
+const timedEach = async (
+  files: readonly string[],
+  quiet: (what: string) => Promise<boolean>,
+): Promise<boolean> => {
+  const [file, ...rest] = files;
+  if (file === undefined) {
+    return true;
+  }
+  const passed = await inWholeTurn(
+    async () => {
+      await quiet(path.relative(cwd, file));
+      return passes([file], false);
+    },
     `the timed tests of ${name} (pid ${String(process.pid)})`,
     Number(process.env[GATE_PORT_ENV] ?? GATE_PORT),
+  );
+  return (await timedEach(rest, quiet)) && passed;
+};
+
+// Read before any test runs, so a ceiling mistyped fails the run at once.
+const ceiling = ceilingOf(process.env[CEILING_ENV]);
+
+/** Runs the timed files one at a time on cores no other run's tests share; the quiet is judged
+ *  inside each turn, so the load it sees is none of the gate's own runs. */
+const timedPass = async (files: readonly string[]): Promise<boolean> =>
+  timedEach(
+    files,
+    quietBefore({
+      sample: cpuSampler(),
+      now: () => performance.now(),
+      ceiling,
+      bound: QUIET_BOUND_MS,
+      say: (line) => {
+        console.log(line);
+      },
+    }),
   );
 
 const phase = phaseOf(process.env[PHASE_ENV]);
