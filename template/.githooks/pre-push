@@ -56,5 +56,14 @@ ${bad}"
 		|| die "main's new tip isn't the commit checked out here: check it out, then push"
 	changes="$(git status --porcelain)"
 	[ -z "${changes}" ] || die "the working tree holds changes the push leaves out: commit them first"
-	mise run check < /dev/null || die "mise run check failed, so main wasn't pushed"
+	# A hook run from a linked worktree gets GIT_DIR, which outranks `-C`, so a check's scratch `git
+	# init` would reinitialise this repository: the check runs without git's variables for it.
+	top="$(git rev-parse --show-toplevel)"
+	(
+		cd "${top}"
+		for name in $(git rev-parse --local-env-vars); do
+			unset "${name}"
+		done
+		mise run check < /dev/null
+	) || die "mise run check failed, so main wasn't pushed"
 done
