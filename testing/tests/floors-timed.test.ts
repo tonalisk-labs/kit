@@ -1,11 +1,13 @@
 // A workspace's timed tests run after the rest and on their own, and stay out of the coverage
 // pass: a fixture workspace's tests write down when each ran.
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
+import { CEILING_ENV } from '../src/floors/quiet.ts';
 import { PHASE_ENV, phaseOf, testFiles } from '../src/floors/timed.ts';
 import { serveGate } from '../src/stack/gate-server.ts';
 import { freePort } from '../src/stack/ports.ts';
@@ -52,7 +54,7 @@ await test('the timed files are found apart from the rest, as node --test would 
 });
 
 /** The runner's environment, less the test runner's own context and the phase this run was
- *  given: the fixture runs on its own, in the phase its test names. */
+ *  given: the fixture runs on its own, in the phase its test names, waiting for no quiet. */
 const ownEnvironment = (): NodeJS.ProcessEnv =>
   Object.assign(
     Object.fromEntries(
@@ -60,7 +62,7 @@ const ownEnvironment = (): NodeJS.ProcessEnv =>
         ([key]) => key !== 'NODE_TEST_CONTEXT' && key !== PHASE_ENV,
       ),
     ),
-    { npm_package_name: 'fixture', KIT_CPU_GATE_PORT: String(GATE) },
+    { npm_package_name: 'fixture', KIT_CPU_GATE_PORT: String(GATE), [CEILING_ENV]: '100' },
   );
 
 const byName = (one: string, other: string): number => one.localeCompare(other);
@@ -138,4 +140,38 @@ await test('the timed phase runs the timed files alone, with nothing before them
   const { ran, said } = await ranIn('timed');
   assert.deepEqual(ran, ['timed after']);
   assert.ok(said.includes('Timed test files run alone (KIT_TEST_PHASE=timed): 1'), said);
+});
+
+await test('a ceiling mistyped fails the run before any test runs', async () => {
+  const { folder, log } = await workspace();
+  const said = await run(process.execPath, [RUNNER], {
+    cwd: folder,
+    env: Object.assign(ownEnvironment(), { [CEILING_ENV]: 'lots' }),
+    signal: new AbortController().signal,
+  }).catch(String);
+  assert.ok(said.includes(`${CEILING_ENV} is a whole percentage from 0 to 100, not lots`), said);
+  assert.equal(await readFile(log, 'utf8'), '');
+  await rm(folder, { recursive: true });
+});
+
+await test('however many timed files run, each alone, the runner warns of nothing', async () => {
+  const { folder, log } = await workspace();
+  const timed = Array.from({ length: 6 }, (_unused, index) => `timed${String(index)}`);
+  await rm(path.join(folder, 'slow.perf.test.mjs'));
+  await Promise.all(
+    timed.map(async (name) =>
+      writeFile(path.join(folder, `${name}.perf.test.mjs`), writer(log, name)),
+    ),
+  );
+  const warnings = path.join(folder, 'warnings.log');
+  await run(process.execPath, [`--redirect-warnings=${warnings}`, RUNNER], {
+    cwd: folder,
+    env: ownEnvironment(),
+    signal: new AbortController().signal,
+  });
+  const written = await readFile(log, 'utf8');
+  const ran = written.trim().split('\n');
+  assert.deepEqual(ran.filter((name) => name.startsWith('timed')).toSorted(byName), timed);
+  assert.equal(existsSync(warnings) ? await readFile(warnings, 'utf8') : '', '');
+  await rm(folder, { recursive: true });
 });
