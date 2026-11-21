@@ -62,13 +62,10 @@ jobs:
             ~/.cache/ms-playwright
             ~/.cache/playwright-apt
           key: ${{ steps.playwright.outputs.key }}
-      # A miss keeps the packages the browsers lack, as apt resolves them, and the lists it read; a
-      # fetch that crawls ends here at the step's bound, not at the job's.
-      - if: steps.playwright.outputs.key != '' && steps.playwright-cache.outputs.cache-hit != 'true'
-        timeout-minutes: 10
+      # Ubuntu's own archives, not the image's mirror list, which can trickle for half an hour
+      # (runner-images#14823). On a hit too: apt reads only the lists named for its sources.
+      - if: steps.playwright.outputs.key != ''
         run: |
-          # The image's mirror list can hold apt on a mirror that trickles for half an hour, below
-          # every timeout apt has (runner-images#14823); Ubuntu's own archives serve it instead.
           awk -v RS= -v ORS='\n\n' '{
             host = "archive"
             n = split($0, line, "\n")
@@ -76,6 +73,11 @@ jobs:
             sub("mirror\\+file:/etc/apt/apt-mirrors.txt", "https://" host ".ubuntu.com/ubuntu/")
           } 1' /etc/apt/sources.list.d/ubuntu.sources > "$RUNNER_TEMP/ubuntu.sources"
           sudo cp "$RUNNER_TEMP/ubuntu.sources" /etc/apt/sources.list.d/ubuntu.sources
+      # A miss keeps the packages the browsers lack, as apt resolves them, and the lists it read; a
+      # fetch that crawls ends here at the step's bound, not at the job's.
+      - if: steps.playwright.outputs.key != '' && steps.playwright-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 10
+        run: |
           store="$HOME/.cache/playwright-apt"
           mkdir -p "$store/archives" "$store/lists"
           # A mirror out of reach fails the run here, in seconds, not package by package later.
