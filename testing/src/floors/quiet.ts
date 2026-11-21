@@ -20,9 +20,8 @@ export const WINDOW_MS = 500;
 /** One sample can fall in a lull between another build's steps, so quiet takes a few in a row. */
 export const QUIET_SAMPLES = 3;
 
-/** The most a timed pass waits for quiet, in all: long enough to catch a lull between another
- *  build's steps, short enough that a machine kept busy costs the pass under a minute, with the CPU
- *  gate's whole turn held idle, before it measures anyway; well inside the gate's stall. */
+/** The most a timed pass waits for quiet, in all: it still catches a lull between other builds'
+ *  steps, and a machine kept busy holds the CPU gate's turn under a minute before it measures. */
 export const BOUND_MS = 45_000;
 
 /** The ceiling `value` names, the default when unset; any other word is refused, so a typo never
