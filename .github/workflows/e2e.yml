@@ -44,9 +44,12 @@ jobs:
         with:
           persist-credentials: false
       # One mise release on every runner, its latest, so each job runs the same task runner.
-      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
         with:
-          version: 2026.11.6
+          version: 2026.11.12
+          # The release-age delay only chooses a mise when none is pinned. Left at its 24h default,
+          # it's reported as ignored, so it's set to nothing.
+          minimum_release_age: ''
       - if: hashFiles('Cargo.lock') != ''
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - run: npm ci
@@ -151,9 +154,12 @@ jobs:
         with:
           persist-credentials: false
       # One mise release on every runner, its latest, so each job runs the same task runner.
-      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
         with:
-          version: 2026.11.6
+          version: 2026.11.12
+          # The release-age delay only chooses a mise when none is pinned. Left at its 24h default,
+          # it's reported as ignored, so it's set to nothing.
+          minimum_release_age: ''
       - if: hashFiles('Cargo.lock') != ''
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - run: npm ci

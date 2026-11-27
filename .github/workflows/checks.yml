@@ -36,9 +36,12 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       # One mise release on every runner, its latest, so each job runs the same task runner.
-      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
         with:
-          version: 2026.11.6
+          version: 2026.11.12
+          # The release-age delay only chooses a mise when none is pinned. Left at its 24h default,
+          # it's reported as ignored, so it's set to nothing.
+          minimum_release_age: ''
       - if: hashFiles('Cargo.lock') != ''
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - if: hashFiles('package-lock.json') != ''
@@ -59,13 +62,10 @@ jobs:
             ~/.cache/ms-playwright
             ~/.cache/playwright-apt
           key: ${{ steps.playwright.outputs.key }}
-      # A miss keeps the packages the browsers lack, as apt resolves them, and the lists it read; a
-      # fetch that crawls ends here at the step's bound, not at the job's.
-      - if: steps.playwright.outputs.key != '' && steps.playwright-cache.outputs.cache-hit != 'true'
-        timeout-minutes: 10
+      # Ubuntu's own archives, not the image's mirror list, which can trickle for half an hour
+      # (runner-images#14823). On a hit too: apt reads only the lists named for its sources.
+      - if: steps.playwright.outputs.key != ''
         run: |
-          # The image's mirror list can hold apt on a mirror that trickles for half an hour, below
-          # every timeout apt has (runner-images#14823); Ubuntu's own archives serve it instead.
           awk -v RS= -v ORS='\n\n' '{
             host = "archive"
             n = split($0, line, "\n")
@@ -73,6 +73,11 @@ jobs:
             sub("mirror\\+file:/etc/apt/apt-mirrors.txt", "https://" host ".ubuntu.com/ubuntu/")
           } 1' /etc/apt/sources.list.d/ubuntu.sources > "$RUNNER_TEMP/ubuntu.sources"
           sudo cp "$RUNNER_TEMP/ubuntu.sources" /etc/apt/sources.list.d/ubuntu.sources
+      # A miss keeps the packages the browsers lack, as apt resolves them, and the lists it read; a
+      # fetch that crawls ends here at the step's bound, not at the job's.
+      - if: steps.playwright.outputs.key != '' && steps.playwright-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 10
+        run: |
           store="$HOME/.cache/playwright-apt"
           mkdir -p "$store/archives" "$store/lists"
           # A mirror out of reach fails the run here, in seconds, not package by package later.
